@@ -24,7 +24,7 @@ export const config = {
 
   
   // File Upload Configuration
-  maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'), // 10MB default
+  maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '104857600'), // 100MB default for large medical records
   uploadDir: process.env.UPLOAD_DIR || './uploads',
   
   // CORS Configuration

@@ -68,7 +68,7 @@ export const MedicalDocumentUpload: React.FC<MedicalDocumentUploadProps> = ({
       'image/png': ['.png'],
       'image/tiff': ['.tiff', '.tif']
     },
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 100 * 1024 * 1024, // 100MB for large medical records
     multiple: true
   });
 
@@ -267,7 +267,7 @@ export const MedicalDocumentUpload: React.FC<MedicalDocumentUploadProps> = ({
                   Drag and drop files, or click to browse
                 </p>
                 <p className="text-xs text-gray-400">
-                  Supports: PDF, DOCX, JPEG, PNG, TIFF • Max size: 50MB per file
+                  Supports: PDF, DOCX, JPEG, PNG, TIFF • Max size: 100MB per file
                 </p>
               </div>
             )}

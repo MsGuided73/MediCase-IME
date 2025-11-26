@@ -81,7 +81,7 @@ export const LabResultsUpload: React.FC<LabResultsUploadProps> = ({
     accept: {
       'application/pdf': ['.pdf']
     },
-    maxSize: 50 * 1024 * 1024, // 50MB as per security settings
+    maxSize: 100 * 1024 * 1024, // 100MB for large medical records
     multiple: true,
     disabled: isUploading
   });
@@ -293,7 +293,7 @@ export const LabResultsUpload: React.FC<LabResultsUploadProps> = ({
                   <span className="text-blue-600 font-medium">browse files</span>
                 </p>
                 <p className="text-sm text-gray-500">
-                  PDF files only, up to 50MB each
+                  PDF files only, up to 100MB each
                 </p>
               </div>
             )}
