@@ -1,0 +1,96 @@
+{
+  "name": "Dx Companion Core Loop",
+  "modules": [
+    {
+      "type": "Webhook",
+      "name": "Receive User Input",
+      "action": "Custom Webhook (POST)",
+      "output": {
+        "user_text": "→ text input or lab upload",
+        "user_file_url": "→ file/image URL if upload"
+      }
+    },
+    {
+      "type": "Router",
+      "name": "Decide Path",
+      "branches": [
+        {
+          "label": "Lab Report?",
+          "condition": "{{user_file_url}} != null",
+          "modules": [
+            {
+              "type": "PDF.co / OCR",
+              "name": "Parse Lab Report",
+              "action": "Perform OCR and extract text"
+            },
+            {
+              "type": "Tools",
+              "name": "Regex Extract Labs",
+              "action": "Parse structured lab values from output"
+            },
+            {
+              "type": "Set Variable",
+              "name": "parsed_labs",
+              "value": "{{parsed_structure}}"
+            }
+          ]
+        },
+        {
+          "label": "Symptom Text",
+          "condition": "{{user_file_url}} == null",
+          "modules": []
+        }
+      ]
+    },
+    {
+      "type": "Data Store",
+      "name": "Fetch Session Context",
+      "action": "Get by session ID",
+      "output": {
+        "history": "→ existing conversation"
+      }
+    },
+    {
+      "type": "Set Variable",
+      "name": "context_payload",
+      "value": "{{history}}\nUser: {{user_text}}\nLabs: {{parsed_labs}}"
+    },
+    {
+      "type": "HTTP Request (OpenAI)",
+      "name": "Call GPT",
+      "settings": {
+        "model": "gpt-4-turbo",
+        "prompt": "\"You are Dx Companion...\" + context_payload",
+        "temperature": 0.2,
+        "max_tokens": 800
+      },
+      "output": {
+        "gpt_response": "→ full text or structured JSON"
+      }
+    },
+    {
+      "type": "JSON Parser / Text Parser",
+      "name": "Extract Response Blocks",
+      "action": "Parse GPT output into: clarifyingQuestions, differential, exploreResponse, safetyNetting"
+    },
+    {
+      "type": "Data Store",
+      "name": "Store Updated Context",
+      "action": "Update record",
+      "data": {
+        "history": "{{context_payload}}\nGPT: {{gpt_response}}"
+      }
+    },
+    {
+      "type": "Webhook Response",
+      "name": "Return to UI",
+      "action": "Respond with JSON",
+      "payload": {
+        "clarifyingQuestions": "{{clarifyingQuestions}}",
+        "differential": "{{differential}}",
+        "explore": "{{exploreResponse}}",
+        "safetyNetting": "{{safetyNetting}}"
+      }
+    }
+  ]
+}

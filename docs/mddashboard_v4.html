@@ -1,0 +1,2634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MedTrack Pro - Patient Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Prevent text selection only where needed */
+        .tab, .symptom-card, .vital-card, .wearable-card {
+            -webkit-user-select: none;
+            -moz-user-select: none; 
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Allow text selection for content areas */
+        .lab-results-table, .insight-content, .treatment-recommendations, p {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f7f4f0 0%, #ececec 100%);
+            min-height: 100vh;
+            color: #333;
+            /* Prevent bounce scrolling on iOS */
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .patient-details h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+
+        .patient-meta {
+            display: flex;
+            gap: 15px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .alert-badges {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .alert {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-high { background: #ff6b6b; color: white; }
+        .alert-medium { background: #ffa726; color: white; }
+        .alert-info { background: #42a5f5; color: white; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .lab-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .lab-results-table th,
+        .lab-results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .lab-results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .value-normal { color: #27ae60; font-weight: 600; }
+        .value-high { color: #e74c3c; font-weight: 600; }
+        .value-low { color: #f39c12; font-weight: 600; }
+
+        .symptoms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .symptom-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .symptom-card:hover {
+            transform: scale(1.05);
+        }
+
+        /* Severity-based color coding */
+        .symptom-card.severity-mild {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+        }
+
+        .symptom-card.severity-moderate {
+            background: linear-gradient(45deg, #FF9800, #FFC107);
+        }
+
+        .symptom-card.severity-high {
+            background: linear-gradient(45deg, #F44336, #E91E63);
+        }
+
+        .symptom-severity {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .medication-list {
+            list-style: none;
+        }
+
+        .medication-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .med-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .med-dosage {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .med-date {
+            color: #95a5a6;
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 3px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        /* Simplified Tab Container */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 8px;
+            background-color: #f8f8f8;
+            border-radius: 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Fallback styles to ensure tabs work even without JavaScript */
+        .tab {
+            /* Basic structure */
+            display: inline-block;
+            min-height: 44px;
+            min-width: 100px;
+            padding: 14px 20px;
+            margin: 0;
+            
+            /* Visual */
+            background-color: #f0f0f0;
+            color: #2c3e50;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            
+            /* Critical for touch */
+            cursor: pointer;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.3); /* Visible tap highlight for mobile */
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+
+            /* Instant feedback for better UX */
+            transition: none !important;
+            
+            /* Ensure it's above everything */
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Remove the complex pseudo-element that might block touches */
+
+        /* SIMPLIFIED: Direct active state for ALL devices */
+        .tab:active {
+            background: rgba(255, 255, 255, 0.95) !important;
+            transform: scale(0.95) !important;
+            transition: none !important; /* Instant feedback */
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* NO HOVER STATES - Removed completely to prevent interference */
+
+        .tab.active {
+            background-color: #4facfe;
+            color: white;
+            font-weight: 600;
+            border-color: #4facfe;
+        }
+
+        /* Removed touching class - no longer needed */
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .vital-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            color: white;
+            border-radius: 12px;
+        }
+
+        .vital-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .vital-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .timeline {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .timeline-date {
+            font-weight: 600;
+            color: #2c3e50;
+            min-width: 100px;
+        }
+
+        .timeline-content {
+            flex: 1;
+            margin-left: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transition: width 0.3s ease;
+        }
+
+        /* Enhanced Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .patient-info {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .alert-badges {
+                align-items: center;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .dashboard-container {
+                padding: 15px;
+            }
+
+            .header {
+                padding: 20px 15px;
+            }
+
+            .card {
+                padding: 20px 15px;
+            }
+
+            /* Mobile tab adjustments */
+            .tabs {
+                padding: 6px;
+                gap: 2px;
+                margin-bottom: 15px;
+            }
+
+            .tab {
+                min-width: 90px;
+                padding: 12px 16px;
+                font-size: 14px;
+                min-height: 44px;
+            }
+
+            /* Wearable components mobile responsiveness */
+            .wearable-metric-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 12px;
+            }
+
+            .wearable-card {
+                padding: 16px 12px;
+                min-height: 120px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .metric-icon {
+                font-size: 20px;
+                margin-bottom: 8px;
+            }
+
+            .metric-value {
+                font-size: 24px;
+                margin-bottom: 4px;
+            }
+
+            .metric-label {
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+
+            .metric-change {
+                font-size: 11px;
+            }
+
+            .sleep-breakdown {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            .sleep-stage {
+                grid-template-columns: 100px 1fr auto;
+                padding: 8px;
+                font-size: 13px;
+            }
+
+            .stage-status {
+                padding: 3px 8px;
+                font-size: 11px;
+            }
+
+            /* Smaller screens - stack tabs vertically if needed */
+            @media (max-width: 480px) {
+                .symptoms-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 10px;
+                }
+
+                .vitals-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 15px;
+                }
+
+                .wearable-metric-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 10px;
+                }
+
+                .wearable-card {
+                    padding: 14px 10px;
+                    min-height: 110px;
+                }
+
+                .metric-value {
+                    font-size: 20px;
+                }
+
+                .metric-icon {
+                    font-size: 18px;
+                }
+
+                .patient-meta {
+                    flex-direction: column;
+                    gap: 5px;
+                    font-size: 12px;
+                }
+
+                .tabs {
+                    flex-wrap: wrap;
+                    max-height: 100px;
+                    overflow-y: auto;
+                }
+
+                .tab {
+                    flex: 1;
+                    min-width: calc(50% - 4px);
+                    margin-bottom: 4px;
+                }
+
+                .sleep-stage {
+                    grid-template-columns: 1fr;
+                    gap: 4px;
+                    text-align: center;
+                }
+
+                .stage-label, .stage-value {
+                    font-size: 12px;
+                }
+            }
+        }
+
+        /* Extra small screens (320px and below) */
+        @media (max-width: 320px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+
+            .wearable-metric-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .wearable-card {
+                padding: 12px 8px;
+                min-height: 100px;
+            }
+
+            .metric-value {
+                font-size: 18px;
+            }
+
+            .metric-label {
+                font-size: 11px;
+            }
+
+            .metric-change {
+                font-size: 10px;
+            }
+
+            .tab {
+                min-width: 80px;
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+        }
+
+        /* Insights Section Styles */
+        .insights-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px solid #ecf0f1;
+        }
+
+        .insights-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .insight-cards {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .insight-card {
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 5px solid;
+        }
+
+        .insight-card.critical {
+            background: rgba(231, 76, 60, 0.05);
+            border-left-color: #e74c3c;
+        }
+
+        .insight-card.warning {
+            background: rgba(243, 156, 18, 0.05);
+            border-left-color: #f39c12;
+        }
+
+        .insight-card.info {
+            background: rgba(52, 152, 219, 0.05);
+            border-left-color: #3498db;
+        }
+
+        .insight-header {
+            font-weight: 600;
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .insight-content p {
+            margin-bottom: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .treatment-recommendations {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .treatment-recommendations h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .treatment-recommendations ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .treatment-recommendations li {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .treatment-recommendations li::before {
+            content: "•";
+            color: #27ae60;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Wearables Styles */
+        .wearables-overview {
+            margin-bottom: 25px;
+        }
+
+        .wearable-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .wearable-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .wearable-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .wearable-card.sleep { background: linear-gradient(135deg, #4e54c8, #8f94fb); }
+        .wearable-card.steps { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .wearable-card.heart { background: linear-gradient(135deg, #fc466b, #3f5efb); }
+        .wearable-card.hrv { background: linear-gradient(135deg, #3b41c5, #a981bb); }
+        .wearable-card.oxygen { background: linear-gradient(135deg, #209cff, #68e0cf); }
+        .wearable-card.stress { background: linear-gradient(135deg, #ff9966, #ff5e62); }
+
+        .metric-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .metric-change {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .metric-change.up { color: #ffeb3b; }
+        .metric-change.down { color: #ff8a80; }
+        .metric-change.stable { color: #a5d6a7; }
+
+        .sleep-breakdown {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .sleep-breakdown h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .sleep-stages {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sleep-stage {
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stage-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .stage-value {
+            color: #7f8c8d;
+        }
+
+        .stage-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stage-status.normal { background: #d4edda; color: #155724; }
+        .stage-status.low { background: #fff3cd; color: #856404; }
+        .stage-status.high { background: #f8d7da; color: #721c24; }
+
+        /* Trends Insights Styles */
+        .trends-insights-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px solid #ecf0f1;
+        }
+
+        /* Section Navigation Styles */
+        #sectionNav {
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            margin-top: 20px;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 0;
+        }
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-group-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            padding: 0 16px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #2c3e50;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background-color: #f8f9fa;
+            border-left-color: #3498db;
+            transform: translateX(2px);
+        }
+
+        .nav-link.active {
+            background-color: #e3f2fd;
+            border-left-color: #2196f3;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-text {
+            flex: 1;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .trends-insight-cards {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+
+    </style>
+    
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="patient-info">
+                <div class="patient-avatar">SM</div>
+                <div class="patient-details">
+                    <h1>Sarah Mitchell</h1>
+                    <div class="patient-meta">
+                        <span>DOB: March 15, 1985 (39 years)</span>
+                        <span>•</span>
+                        <span>ID: PM-2024-7891</span>
+                        <span>•</span>
+                        <span>Last Visit: July 25, 2025</span>
+                    </div>
+                </div>
+                <div class="alert-badges">
+                    <div class="alert alert-high">High Cholesterol</div>
+                    <div class="alert alert-medium">Iron Deficiency</div>
+                    <div class="alert alert-info">Monitoring (Hgb <10g/dL)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Left Column -->
+            <div class="card">
+                <div class="tabs">
+                    <button type="button" class="tab active" data-tab="lab-results" onclick="window.mobileTabManager && window.mobileTabManager.switchTab('lab-results', this)">Data & Insights</button>
+                    <button type="button" class="tab" data-tab="symptoms" onclick="window.mobileTabManager && window.mobileTabManager.switchTab('symptoms', this)">Symptom Tracking</button>
+                    <button type="button" class="tab" data-tab="wearables" onclick="window.mobileTabManager && window.mobileTabManager.switchTab('wearables', this)">Wearables Data</button>
+                    <button type="button" class="tab" data-tab="trends" onclick="window.mobileTabManager && window.mobileTabManager.switchTab('trends', this)">Trends</button>
+                    <button type="button" class="tab" data-tab="nutrition" onclick="window.mobileTabManager && window.mobileTabManager.switchTab('nutrition', this)">Your Nutritional Insights</button>
+                </div>
+
+                <!-- Lab Results Tab -->
+                <div id="lab-results" class="tab-content active">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3"/>
+                        </svg>
+                        July 28, 2025 Lab Results (CBC)
+                    </div>
+                    <table class="lab-results-table">
+                        <thead>
+                            <tr>
+                                <th>Test</th>
+                                <th>Result</th>
+                                <th>Normal Range</th>
+                                <th>Status</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>White Blood Cells</td>
+                                <td class="value-normal">7.2 K/μL</td>
+                                <td>4.0-11.0 K/μL</td>
+                                <td>Normal</td>
+                                <td>→ Stable</td>
+                            </tr>
+                            <tr>
+                                <td>Red Blood Cells</td>
+                                <td class="value-normal">4.1 M/μL</td>
+                                <td>3.8-5.2 M/μL</td>
+                                <td>Normal</td>
+                                <td>↓ Slight decline</td>
+                            </tr>
+                            <tr>
+                                <td>Hemoglobin</td>
+                                <td class="value-low">10.8 g/dL</td>
+                                <td>12.0-16.0 g/dL</td>
+                                <td>Low ⚠️</td>
+                                <td>↓ Declining</td>
+                            </tr>
+                            <tr>
+                                <td>Hematocrit</td>
+                                <td class="value-low">32.1%</td>
+                                <td>36.0-48.0%</td>
+                                <td>Low ⚠️</td>
+                                <td>↓ Declining</td>
+                            </tr>
+                            <tr>
+                                <td>Platelets</td>
+                                <td class="value-normal">285 K/μL</td>
+                                <td>150-450 K/μL</td>
+                                <td>Normal</td>
+                                <td>→ Stable</td>
+                            </tr>
+                            <tr>
+                                <td>Total Cholesterol</td>
+                                <td class="value-high">248 mg/dL</td>
+                                <td>&lt;200 mg/dL</td>
+                                <td>High 🚨</td>
+                                <td>↑ Rising</td>
+                            </tr>
+                            <tr>
+                                <td>Iron</td>
+                                <td class="value-low">45 μg/dL</td>
+                                <td>60-170 μg/dL</td>
+                                <td>Low ⚠️</td>
+                                <td>↓ Declining</td>
+                            </tr>
+                            <tr>
+                                <td>Ferritin</td>
+                                <td class="value-low">8 ng/mL</td>
+                                <td>15-150 ng/mL</td>
+                                <td>Low ⚠️</td>
+                                <td>↓ Critically low</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Diagnostic Shortlist Section - Moved from bottom -->
+                    <div id="diagnostic-shortlist" class="card-title" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        🩺 DIAGNOSTIC SHORTLIST
+                    </div>
+
+                    <div class="differential-diagnosis-table" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+                        <div class="table-header" style="background: #f8f9fa; padding: 15px; border-bottom: 2px solid #e9ecef;">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 2fr 2fr; gap: 20px; font-weight: 600; color: #2c3e50; font-size: 14px;">
+                                <div>Condition</div>
+                                <div>Likelihood</div>
+                                <div>Supporting Evidence</div>
+                                <div>Confirmatory Tests</div>
+                            </div>
+                        </div>
+
+                        <div class="table-body">
+                            <div class="diagnosis-row" style="display: grid; grid-template-columns: 2fr 1fr 2fr 2fr; gap: 20px; padding: 15px; border-bottom: 1px solid #f1f3f4; align-items: center;">
+                                <div style="font-weight: 600; color: #2c3e50; font-size: 14px;">Iron Deficiency Anemia</div>
+                                <div><span style="background: #27ae60; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">High</span></div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Low Hgb, Ferritin, Iron; fatigue symptoms</div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">TIBC, Transferrin Saturation, Reticulocyte count</div>
+                            </div>
+
+                            <div class="diagnosis-row" style="display: grid; grid-template-columns: 2fr 1fr 2fr 2fr; gap: 20px; padding: 15px; border-bottom: 1px solid #f1f3f4; align-items: center;">
+                                <div style="font-weight: 600; color: #2c3e50; font-size: 14px;">Chronic GI Blood Loss</div>
+                                <div><span style="background: #f39c12; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">Moderate</span></div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Progressive iron deficiency, no dietary cause</div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Colonoscopy, Upper endoscopy, Fecal occult blood</div>
+                            </div>
+
+                            <div class="diagnosis-row" style="display: grid; grid-template-columns: 2fr 1fr 2fr 2fr; gap: 20px; padding: 15px; border-bottom: 1px solid #f1f3f4; align-items: center;">
+                                <div style="font-weight: 600; color: #2c3e50; font-size: 14px;">Inflammatory Arthritis</div>
+                                <div><span style="background: #f39c12; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">Moderate</span></div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Joint pain 7/10, worsening pattern</div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">ESR, CRP, RF, Anti-CCP, ANA, X-rays</div>
+                            </div>
+
+                            <div class="diagnosis-row" style="display: grid; grid-template-columns: 2fr 1fr 2fr 2fr; gap: 20px; padding: 15px; border-bottom: 1px solid #f1f3f4; align-items: center;">
+                                <div style="font-weight: 600; color: #2c3e50; font-size: 14px;">Familial Hypercholesterolemia</div>
+                                <div><span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">Low</span></div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Statin resistance, elevated cholesterol</div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Lipid panel, Family history, Genetic testing</div>
+                            </div>
+
+                            <div class="diagnosis-row" style="display: grid; grid-template-columns: 2fr 1fr 2fr 2fr; gap: 20px; padding: 15px; align-items: center;">
+                                <div style="font-weight: 600; color: #2c3e50; font-size: 14px;">Hypothyroidism</div>
+                                <div><span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">Low</span></div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">Fatigue, elevated cholesterol</div>
+                                <div style="color: #2c3e50; font-size: 13px; line-height: 1.4;">TSH, Free T4, Free T3</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+
+
+
+
+
+
+                    <!-- Clinical Insights Section -->
+                    <div class="insights-section" id="integrated-findings">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,17A1.5,1.5 0 0,0 10.5,15.5A1.5,1.5 0 0,0 12,14A1.5,1.5 0 0,0 13.5,15.5A1.5,1.5 0 0,0 12,17M12,4A6,6 0 0,0 6,10C6,10 6,10.5 6.5,11H9V12.5H8.5C8,12.5 7.5,12.85 7.5,13.5V16H10.5V13.5H11.5V16H16.5V13.5C16.5,12.85 16,12.5 15.5,12.5H15V11H17.5C18,10.5 18,10 18,10A6,6 0 0,0 12,4Z"/>
+                            </svg>
+                            INTEGRATED FINDINGS
+                        </h3>
+                        
+                        <div class="insight-cards">
+                            <div class="insight-card critical">
+                                <div class="insight-header">🩸 Iron Deficiency Anemia - CONFIRMED</div>
+                                <div class="insight-content">
+                                    <p><strong>Lab Evidence:</strong> Low Hemoglobin (10.8), Hematocrit (32.1%), Iron (45), Ferritin (8)</p>
+                                    <p><strong>Supporting Symptoms:</strong> Fatigue (6/10, increasing), Dizziness (3/10), correlating with declining lab values</p>
+                                    <p><strong>Wearable Data:</strong> Decreased step count (-22%), increased resting HR (+8 bpm), poor sleep quality</p>
+                                </div>
+                            </div>
+                            
+                            <div class="insight-card warning">
+                                <div class="insight-header">❤️ Hypercholesterolemia - REQUIRES ATTENTION</div>
+                                <div class="insight-content">
+                                    <p><strong>Lab Evidence:</strong> Total Cholesterol 248 mg/dL (24% above target)</p>
+                                    <p><strong>Current Treatment:</strong> Atorvastatin 20mg (started May 2025) - may need dose adjustment</p>
+                                    <p><strong>Lifestyle Impact:</strong> Reduced activity levels may be contributing to lipid elevation</p>
+
+                                    <!-- Recommended Action for Cholesterol Management -->
+                                    <div style="margin-top: 15px; padding: 15px; background: #fffef7; border-radius: 8px; border-left: 1px solid #feca57; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                        <div style="font-weight: 600; font-size: 15px; color: #2c3e50; margin-bottom: 10px;">📋 Recommended Action:</div>
+                                        <p style="font-size: 14px; line-height: 1.5; color: #2c3e50; font-weight: 400; margin-bottom: 0;">Evaluate atorvastatin effectiveness, consider lifestyle counseling</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="insight-card info">
+                                <div class="insight-header">🔍 Inflammatory Markers - MONITORING</div>
+                                <div class="insight-content">
+                                    <p><strong>Symptom Pattern:</strong> Joint pain (7/10, worsening) without clear lab inflammation markers</p>
+                                    <p><strong>Recommendation:</strong> Consider ESR, CRP, and rheumatologic panel</p>
+                                    <p><strong>Activity Impact:</strong> 35% reduction in active minutes, may be pain-related</p>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- Wearable Data & Clinical Correlation Insights -->
+                    <div class="insights-section" id="biosensor-insights">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,17A1.5,1.5 0 0,0 10.5,15.5A1.5,1.5 0 0,0 12,14A1.5,1.5 0 0,0 13.5,15.5A1.5,1.5 0 0,0 12,17M12,4A6,6 0 0,0 6,10C6,10 6,10.5 6.5,11H9V12.5H8.5C8,12.5 7.5,12.85 7.5,13.5V16H10.5V13.5H11.5V16H16.5V13.5C16.5,12.85 16,12.5 15.5,12.5H15V11H17.5C18,10.5 18,10 18,10A6,6 0 0,0 12,4Z"/>
+                            </svg>
+                            BIOSENSOR INSIGHTS
+                        </h3>
+
+                        <div class="insight-cards">
+                            <div class="insight-card critical">
+                                <div class="insight-header">😴 Sleep-Anemia-Fatigue Cycle</div>
+                                <div class="insight-content">
+                                    <p><strong>Pattern Detection:</strong> 5.2hr avg sleep (↓20% from baseline) correlates with Hemoglobin 10.8 g/dL</p>
+                                    <p><strong>Mechanism:</strong> Iron deficiency → Poor oxygen delivery → Frequent micro-awakenings → Non-restorative sleep</p>
+                                    <p><strong>Deep Sleep Deficit:</strong> Only 45min (14%) vs normal 20-25% - directly impacts cellular repair and recovery</p>
+                                    <p><strong>Predictive Value:</strong> Each 1g/dL drop in Hgb correlates with ~15min less deep sleep in this patient</p>
+
+                                    <!-- Guided Intervention for Sleep-Anemia-Fatigue Cycle -->
+                                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #3498db;">
+                                        <div style="font-weight: 600; font-size: 15px; color: #2c3e50; margin-bottom: 10px;">💤 Sleep Optimization Protocol (Guided Intervention)</div>
+                                        <div>
+                                            <p style="font-size: 14px; line-height: 1.5; color: #2c3e50; font-weight: 400; margin-bottom: 8px;">
+                                                <strong>Iron supplement timing:</strong> Move to 2 hours before bed to improve absorption and reduce GI distress affecting sleep
+                                            </p>
+                                            <p style="font-size: 14px; line-height: 1.5; color: #2c3e50; font-weight: 400; margin-bottom: 8px;">
+                                                <strong>Target bedtime HR:</strong> <70bpm using breathing exercises
+                                            </p>
+                                            <p style="font-size: 14px; line-height: 1.5; color: #2c3e50; font-weight: 400; margin-bottom: 8px;">
+                                                <strong>Monitor:</strong> If deep sleep remains <15% after 2 weeks, consider sleep study for restless leg syndrome (common in iron deficiency)
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="insight-card warning">
+                                <div class="insight-header">💓 Cardiovascular Compensation Pattern</div>
+                                <div class="insight-content">
+                                    <p><strong>HR Elevation:</strong> Resting HR 78bpm (+8 from baseline) indicates cardiac compensation for anemia</p>
+                                    <p><strong>HRV Decline:</strong> 28ms (↓22%) suggests autonomic dysfunction from combined anemia + poor sleep</p>
+                                    <p><strong>Activity Intolerance:</strong> Steps decreased 22% when HR exceeds 85bpm during minimal exertion</p>
+                                    <p><strong>Risk Factor:</strong> Sustained elevated HR + high cholesterol (248) = increased cardiovascular strain</p>
+                                </div>
+                            </div>
+
+                            <div class="insight-card info">
+                                <div class="insight-header">📊 Activity-Symptom Feedback Loop</div>
+                                <div class="insight-content">
+                                    <p><strong>Morning Pattern:</strong> Low morning HRV (25ms) predicts joint pain severity (r=0.72)</p>
+                                    <p><strong>Step Count Threshold:</strong> Days with <4000 steps correlate with next-day fatigue increase</p>
+                                    <p><strong>Recovery Marker:</strong> SpO2 drops to 95% during sleep on high joint pain days</p>
+                                    <p><strong>Intervention Window:</strong> Best activity tolerance 2-4pm when ferritin-related fatigue is lowest</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Longitudinal Analysis & Treatment Response -->
+                    <div class="insights-section" id="trend-trajectory">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z"/>
+                            </svg>
+                            TREND TRAJECTORY
+                        </h3>
+
+                        <div class="insight-cards">
+                            <div class="insight-card critical">
+                                <div class="insight-header">📉 Progressive Iron Deficiency - CHRONIC PATTERN</div>
+                                <div class="insight-content">
+                                    <p><strong>6-Month Decline:</strong> Hemoglobin ↓18% (12.1→10.8), Iron ↓31% (65→45 μg/dL)</p>
+                                    <p><strong>Clinical Significance:</strong> Consistent monthly decline suggests ongoing blood loss or malabsorption, not acute event</p>
+                                    <p><strong>Risk Stratification:</strong> High risk for cardiac complications if Hgb falls below 10 g/dL - consider IV iron if no response in 4 weeks</p>
+                                    <p><strong>Treatment Response:</strong> Recommend monitoring schedule of weekly CBC x2; then 1x monthly thereafter. Follow up OV in 4 weeks if Hgb decline continues.</p>
+                                </div>
+                            </div>
+
+                            <div class="insight-card warning">
+                                <div class="insight-header">📈 Accelerating Cardiovascular Risk</div>
+                                <div class="insight-content">
+                                    <p><strong>Cholesterol Trajectory:</strong> 13% increase over 6 months (220→248 mg/dL)</p>
+                                    <p><strong>Statin Resistance:</strong> Despite atorvastatin since May 15, levels continue rising</p>
+                                    <p><strong>Compounding Factors:</strong> Reduced activity from anemia may worsen lipid profile</p>
+                                </div>
+                            </div>
+
+                            <div class="insight-card info">
+                                <div class="insight-header">🔍 Timeline Correlation Analysis</div>
+                                <div class="insight-content">
+                                    <p><strong>Symptom Onset:</strong> Patient fatigue complaints began ~April (correlates with Hgb <11.5)</p>
+                                    <p><strong>Critical Threshold:</strong> Joint pain emerged when ferritin likely fell below 15 ng/mL (May-June)</p>
+                                    <p><strong>Predictive Value:</strong> Current trajectory suggests ferritin <5 ng/mL without intervention</p>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+
+
+
+                <!-- Symptoms Tab -->
+                <div id="symptoms" class="tab-content">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"/>
+                        </svg>
+                        Current Symptoms (Last 7 Days)
+                    </div>
+                    <div class="symptoms-grid">
+                        <div class="symptom-card severity-moderate">
+                            <div class="symptom-severity">6/10</div>
+                            <div>Fatigue</div>
+                            <div style="font-size: 12px; opacity: 0.8;">↑ Increasing</div>
+                        </div>
+                        <div class="symptom-card severity-mild">
+                            <div class="symptom-severity">4/10</div>
+                            <div>Headaches</div>
+                            <div style="font-size: 12px; opacity: 0.8;">→ Stable</div>
+                        </div>
+                        <div class="symptom-card severity-mild">
+                            <div class="symptom-severity">3/10</div>
+                            <div>Dizziness</div>
+                            <div style="font-size: 12px; opacity: 0.8;">↓ Improving</div>
+                        </div>
+                        <div class="symptom-card severity-high">
+                            <div class="symptom-severity">7/10</div>
+                            <div>Joint Pain</div>
+                            <div style="font-size: 12px; opacity: 0.8;">↑ Worsening</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="symptomsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Wearables Data Tab -->
+                <div id="wearables" class="tab-content">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M20.1,7L23,9.2L21.8,10.6L19.3,8.5L19.4,7H20.1M4.8,6.8L7.3,8.5L6.2,10.1L3.2,7.9L4.8,6.8M12.5,1H11.5V4H12.5V1M21,13H24V12H21V13M0,13H3V12H0V13M6,20H18A2,2 0 0,1 20,22H4A2,2 0 0,1 6,20M8,22H16V23H8V22Z"/>
+                        </svg>
+                        Wearable Device Data (Last 7 Days)
+                    </div>
+                    
+                    <div class="wearables-overview">
+                        <div class="wearable-metric-grid">
+                            <div class="wearable-card sleep">
+                                <div class="metric-icon">🛌</div>
+                                <div class="metric-value">5.2 hrs</div>
+                                <div class="metric-label">Avg Sleep</div>
+                                <div class="metric-change down">↓ -1.3 hrs vs baseline</div>
+                            </div>
+                            <div class="wearable-card steps">
+                                <div class="metric-icon">👟</div>
+                                <div class="metric-value">4,650</div>
+                                <div class="metric-label">Daily Steps</div>
+                                <div class="metric-change down">↓ -22% vs target</div>
+                            </div>
+                            <div class="wearable-card heart">
+                                <div class="metric-icon">❤️</div>
+                                <div class="metric-value">78 bpm</div>
+                                <div class="metric-label">Resting HR</div>
+                                <div class="metric-change up">↑ +8 bpm vs baseline</div>
+                            </div>
+                            <div class="wearable-card hrv">
+                                <div class="metric-icon">📊</div>
+                                <div class="metric-value">28 ms</div>
+                                <div class="metric-label">HRV</div>
+                                <div class="metric-change down">↓ Low variability</div>
+                            </div>
+                            <div class="wearable-card oxygen">
+                                <div class="metric-icon">🔵</div>
+                                <div class="metric-value">97%</div>
+                                <div class="metric-label">SpO2</div>
+                                <div class="metric-change stable">→ Normal range</div>
+                            </div>
+                            <div class="wearable-card stress">
+                                <div class="metric-icon">⚡</div>
+                                <div class="metric-value">High</div>
+                                <div class="metric-label">Stress Level</div>
+                                <div class="metric-change up">↑ Above normal</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sleep-breakdown">
+                        <h4>Sleep Quality Analysis</h4>
+                        <div class="sleep-stages">
+                            <div class="sleep-stage">
+                                <span class="stage-label">Deep Sleep:</span>
+                                <span class="stage-value">45 min (14%)</span>
+                                <span class="stage-status low">Below optimal</span>
+                            </div>
+                            <div class="sleep-stage">
+                                <span class="stage-label">REM Sleep:</span>
+                                <span class="stage-value">68 min (22%)</span>
+                                <span class="stage-status normal">Normal</span>
+                            </div>
+                            <div class="sleep-stage">
+                                <span class="stage-label">Light Sleep:</span>
+                                <span class="stage-value">3.2 hrs (64%)</span>
+                                <span class="stage-status high">High proportion</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="wearablesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Trends Tab -->
+                <div id="trends" class="tab-content">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"/>
+                        </svg>
+                        Health Trends (6 Months)
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+
+
+                </div>
+
+                <!-- Your Nutritional Insights Tab -->
+                <div id="nutrition" class="tab-content">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"/>
+                        </svg>
+                        Your Nutritional Insights
+                    </div>
+
+                    <!-- Condition-Specific Recommendations -->
+                    <div class="nutritional-recommendations" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+                        <div class="nutrition-header" style="background: #f8f9fa; color: #2c3e50; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50;">Targeted Nutrition for Your Specific Needs</h3>
+                            <p style="margin: 8px 0 0 0; font-size: 16px; color: #6c757d;">Based on Hgb 10.8 g/dL, Ferritin 8 ng/mL, Cholesterol 248 mg/dL</p>
+                        </div>
+
+                        <!-- Iron Deficiency Anemia Nutrition -->
+                        <div class="condition-nutrition" style="padding: 20px; border-bottom: 1px solid #f1f3f4;">
+                            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                <span style="background: #dc3545; color: white; padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 600; margin-right: 12px;">CRITICAL</span>
+                                <h4 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Iron Deficiency Anemia (Hgb 10.8, Ferritin 8)</h4>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                <div>
+                                    <h5 style="color: #2c3e50; margin-bottom: 8px; font-size: 16px; font-weight: 600;">🥩 IRON-RICH FOODS</h5>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #2c3e50;">
+                                        <li><strong>Heme Iron (Best Absorbed):</strong> Lean beef, chicken liver, sardines</li>
+                                        <li><strong>Non-Heme Iron:</strong> Spinach, lentils, fortified cereals</li>
+                                        <li><strong>Dark leafy greens:</strong> Swiss chard, kale, collard greens</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 style="color: #2c3e50; margin-bottom: 8px; font-size: 16px; font-weight: 600;">🍊 ABSORPTION ENHANCERS</h5>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #2c3e50;">
+                                        <li><strong>Vitamin C:</strong> Orange juice, bell peppers, strawberries</li>
+                                        <li><strong>Timing:</strong> Take with iron-rich meals</li>
+                                        <li><strong>Cast iron cooking:</strong> Increases iron content significantly</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+
+                        </div>
+
+                        <!-- Hypercholesterolemia Nutrition -->
+                        <div class="condition-nutrition" style="padding: 20px; border-bottom: 1px solid #f1f3f4;">
+                            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                <span style="background: #fd7e14; color: white; padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 600; margin-right: 12px;">HIGH</span>
+                                <h4 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Hypercholesterolemia (Total: 248 mg/dL, Target: <200)</h4>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                                <div>
+                                    <h5 style="color: #2c3e50; margin-bottom: 8px; font-size: 16px; font-weight: 600;">❤️ HEART-HEALTHY FOODS</h5>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #2c3e50;">
+                                        <li><strong>Soluble Fiber:</strong> Oats, beans, apples with skin</li>
+                                        <li><strong>Omega-3 Rich:</strong> Salmon, walnuts, flaxseeds</li>
+                                        <li><strong>Plant Sterols:</strong> Fortified margarine, nuts, seeds</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 style="color: #2c3e50; margin-bottom: 8px; font-size: 16px; font-weight: 600;">🚫 LIMIT/AVOID</h5>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #2c3e50;">
+                                        <li><strong>Saturated Fat:</strong> Less than 7% total calories</li>
+                                        <li><strong>Trans Fat:</strong> Processed foods, fried foods</li>
+                                        <li><strong>Dietary Cholesterol:</strong> Limit high-cholesterol foods</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Anti-Inflammatory Foods -->
+                        <div class="condition-nutrition" style="padding: 20px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                <span style="background: #6f42c1; color: white; padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 600; margin-right: 12px;">SUPPORT</span>
+                                <h4 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Anti-Inflammatory Support (Joint Pain 7/10, Fatigue 6/10)</h4>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <h5 style="color: #2c3e50; margin-bottom: 8px; font-size: 16px; font-weight: 600;">🌿 ANTI-INFLAMMATORY FOODS</h5>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #2c3e50;">
+                                        <li><strong>Fatty Fish:</strong> Salmon, mackerel, sardines</li>
+                                        <li><strong>Colorful Vegetables:</strong> Berries, cherries, leafy greens</li>
+                                        <li><strong>Spices:</strong> Turmeric, ginger, garlic</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 style="color: #2c3e50; margin-bottom: 8px; font-size: 16px; font-weight: 600;">⚡ ENERGY SUPPORT</h5>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #2c3e50;">
+                                        <li><strong>Complex Carbs:</strong> Quinoa, sweet potatoes, brown rice</li>
+                                        <li><strong>B-Vitamins:</strong> Nutritional yeast, whole grains</li>
+                                        <li><strong>Magnesium:</strong> Pumpkin seeds, dark chocolate</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nutritional Food Coupon Button -->
+                        <div style="text-align: center; margin: 20px;">
+                            <button onclick="openNutritionalCoupons()" style="background: #0d6efd; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                Click to claim discount coupons for recommended nutritional foods
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Supplement Recommendations -->
+                    <div class="supplement-recommendations" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+                        <div class="supplement-header" style="background: #f8f9fa; color: #2c3e50; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50;">Nutritional Supplements</h3>
+                            <p style="margin: 8px 0 0 0; font-size: 16px; color: #6c757d;">Coordinated with Current Medications (Atorvastatin 20mg)</p>
+                        </div>
+
+                        <div class="supplement-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 20px;">
+
+                            <!-- Iron Supplement -->
+                            <div class="supplement-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                    <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-right: 8px;">CRITICAL</span>
+                                    <h4 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Iron Supplement</h4>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Recommendation:</strong> Ferrous sulfate 325mg (65mg elemental iron)</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Timing:</strong> Take on empty stomach, 1 hour before meals</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Duration:</strong> 3-6 months, then reassess ferritin levels</p>
+                                </div>
+                                <div style="background: transparent; padding: 8px; border-radius: 4px; font-size: 14px; border: 1px solid transparent; background-image: linear-gradient(white, white), linear-gradient(45deg, #667eea, #764ba2); background-origin: border-box; background-clip: content-box, border-box;">
+                                    <strong style="color: #2c3e50;">⚠️ Interactions:</strong> <span style="color: #2c3e50;">Take 2+ hours apart from calcium, coffee, tea</span>
+                                </div>
+                            </div>
+
+                            <!-- Vitamin C -->
+                            <div class="supplement-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                    <span style="background: #198754; color: white; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-right: 8px;">SYNERGY</span>
+                                    <h4 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Vitamin C</h4>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Recommendation:</strong> 500mg with iron supplement</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Benefit:</strong> Increases iron absorption by 3-4x</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Timing:</strong> Take simultaneously with iron</p>
+                                </div>
+                                <div style="background: #d1ecf1; padding: 8px; border-radius: 4px; font-size: 14px;">
+                                    <strong style="color: #2c3e50;">✅ Safe:</strong> <span style="color: #2c3e50;">No interactions with atorvastatin</span>
+                                </div>
+                            </div>
+
+                            <!-- Omega-3 -->
+                            <div class="supplement-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                    <span style="background: #0d6efd; color: white; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-right: 8px;">CARDIO</span>
+                                    <h4 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Omega-3 EPA/DHA</h4>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Recommendation:</strong> 1000mg EPA/DHA daily</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Benefit:</strong> Supports cholesterol management, reduces inflammation</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Timing:</strong> With largest meal</p>
+                                </div>
+                                <div style="background: #d1ecf1; padding: 8px; border-radius: 4px; font-size: 14px;">
+                                    <strong style="color: #2c3e50;">✅ Synergy:</strong> <span style="color: #2c3e50;">May enhance statin effectiveness</span>
+                                </div>
+                            </div>
+
+                            <!-- B-Complex -->
+                            <div class="supplement-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                    <span style="background: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-right: 8px;">ENERGY</span>
+                                    <h4 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 16px;">B-Complex</h4>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Recommendation:</strong> High-potency B-complex</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Benefit:</strong> Supports energy metabolism, reduces fatigue</p>
+                                    <p style="margin: 8px 0 0 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Timing:</strong> Morning with breakfast</p>
+                                </div>
+                                <div style="background: #d1ecf1; padding: 8px; border-radius: 4px; font-size: 14px;">
+                                    <strong style="color: #2c3e50;">✅ Safe:</strong> <span style="color: #2c3e50;">Water-soluble, low interaction risk</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Supplement Coupon Button -->
+                        <div style="text-align: center; margin: 20px;">
+                            <button onclick="openSupplementCoupons()" style="background: #0d6efd; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                Click to claim discount coupons for recommended nutritional supplements
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Implementation Guidance -->
+                    <div class="implementation-guidance" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+                        <div class="implementation-header" style="background: #f8f9fa; color: #2c3e50; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50;">Implementation & Timeline</h3>
+                            <p style="margin: 8px 0 0 0; font-size: 16px; color: #6c757d;">Practical Steps for Nutritional Recovery</p>
+                        </div>
+
+                        <div class="implementation-content" style="padding: 20px;">
+
+                            <!-- Shopping List -->
+                            <div class="implementation-section" style="margin-bottom: 25px;">
+                                <h4 style="color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; font-weight: 600; font-size: 18px;">
+                                    <span style="font-size: 20px; margin-right: 8px;">🛒</span>
+                                    Weekly Shopping List
+                                </h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 1px solid #dc3545;">
+                                        <h5 style="color: #2c3e50; margin-bottom: 8px; font-weight: 600; font-size: 16px;">Iron-Rich Proteins</h5>
+                                        <ul style="margin: 0; padding-left: 15px; font-size: 15px; color: #2c3e50;">
+                                            <li>Lean beef (3 servings/week)</li>
+                                            <li>Chicken liver (1 serving/week)</li>
+                                            <li>Salmon fillets (2 servings/week)</li>
+                                            <li>Sardines (canned, 2 cans)</li>
+                                        </ul>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 1px solid #198754;">
+                                        <h5 style="color: #2c3e50; margin-bottom: 8px; font-weight: 600; font-size: 16px;">Vegetables & Fruits</h5>
+                                        <ul style="margin: 0; padding-left: 15px; font-size: 15px; color: #2c3e50;">
+                                            <li>Fresh spinach (2 bags)</li>
+                                            <li>Bell peppers (red/yellow)</li>
+                                            <li>Strawberries (2 containers)</li>
+                                            <li>Oranges (6 pieces)</li>
+                                        </ul>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 1px solid #0d6efd;">
+                                        <h5 style="color: #2c3e50; margin-bottom: 8px; font-weight: 600; font-size: 16px;">Whole Grains & Legumes</h5>
+                                        <ul style="margin: 0; padding-left: 15px; font-size: 15px; color: #2c3e50;">
+                                            <li>Fortified oatmeal</li>
+                                            <li>Dried lentils (red & green)</li>
+                                            <li>Quinoa</li>
+                                            <li>Brown rice</li>
+                                        </ul>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 1px solid #6f42c1;">
+                                        <h5 style="color: #2c3e50; margin-bottom: 8px; font-weight: 600; font-size: 16px;">Healthy Fats & Nuts</h5>
+                                        <ul style="margin: 0; padding-left: 15px; font-size: 15px; color: #2c3e50;">
+                                            <li>Walnuts (1 bag)</li>
+                                            <li>Pumpkin seeds</li>
+                                            <li>Extra virgin olive oil</li>
+                                            <li>Ground flaxseed</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expected Timeline -->
+                            <div class="implementation-section">
+                                <h4 style="color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; font-weight: 600; font-size: 18px;">
+                                    <span style="font-size: 20px; margin-right: 8px;">📅</span>
+                                    Expected Recovery Timeline
+                                </h4>
+                                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                                        <div style="text-align: center;">
+                                            <div style="background: #0d6efd; color: white; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold; font-size: 12px;">2-4<br>WKS</div>
+                                            <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Energy Improvement</h5>
+                                            <p style="margin: 0; font-size: 14px; color: #6c757d;">Fatigue may reduce from 6/10 to 4/10</p>
+                                        </div>
+                                        <div style="text-align: center;">
+                                            <div style="background: #fd7e14; color: white; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold; font-size: 12px;">6-8<br>WKS</div>
+                                            <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Lab Improvement</h5>
+                                            <p style="margin: 0; font-size: 14px; color: #6c757d;">Hemoglobin may rise to 11.5-12 g/dL</p>
+                                        </div>
+                                        <div style="text-align: center;">
+                                            <div style="background: #198754; color: white; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold; font-size: 12px;">3-6<br>MOS</div>
+                                            <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Full Recovery</h5>
+                                            <p style="margin: 0; font-size: 14px; color: #6c757d;">Ferritin stores replenished (>30 ng/mL)</p>
+                                        </div>
+                                        <div style="text-align: center;">
+                                            <div style="background: #6f42c1; color: white; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold; font-size: 12px;">2-3<br>MOS</div>
+                                            <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-weight: 600; font-size: 16px;">Cholesterol Impact</h5>
+                                            <p style="margin: 0; font-size: 14px; color: #6c757d;">May see 10-15% reduction in total cholesterol</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- Meal Planning Section - Moved to bottom -->
+                    <div class="meal-planning" style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+                        <div class="meal-header" style="background: #f8f9fa; color: #2c3e50; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50;">Personalized Meal Plan</h3>
+                            <p style="margin: 8px 0 0 0; font-size: 16px; color: #6c757d;">Optimized for Iron Absorption & Cholesterol Management</p>
+                        </div>
+
+                        <!-- Sample Meals -->
+                        <div class="meal-examples" style="padding: 20px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+
+                                <!-- Breakfast -->
+                                <div class="meal-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                        <span style="font-size: 20px; margin-right: 8px;">🌅</span>
+                                        <h4 style="margin: 0; color: #2c3e50; font-weight: 600; font-size: 16px;">BREAKFAST</h4>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                        <strong style="color: #2c3e50; font-size: 15px;">Iron-Fortified Oatmeal Bowl</strong>
+                                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 15px; color: #2c3e50;">
+                                            <li>1 cup fortified oatmeal (18mg iron)</li>
+                                            <li>1/2 cup strawberries (85mg vitamin C)</li>
+                                            <li>1 tbsp ground flaxseed (omega-3)</li>
+                                            <li>1 glass orange juice (124mg vitamin C)</li>
+                                        </ul>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; color: #6c757d;">
+                                        <div><strong>Iron:</strong> 18.2mg</div>
+                                        <div><strong>Vitamin C:</strong> 209mg</div>
+                                        <div><strong>Fiber:</strong> 8g</div>
+                                        <div><strong>Calories:</strong> 420</div>
+                                    </div>
+                                </div>
+
+                                <!-- Lunch -->
+                                <div class="meal-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                        <span style="font-size: 20px; margin-right: 8px;">☀️</span>
+                                        <h4 style="margin: 0; color: #2c3e50; font-weight: 600;">LUNCH</h4>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                        <strong style="color: #2c3e50;">Spinach & Lentil Salad with Salmon</strong>
+                                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #2c3e50;">
+                                            <li>2 cups fresh spinach (6.4mg iron)</li>
+                                            <li>1/2 cup cooked lentils (3.3mg iron)</li>
+                                            <li>3oz grilled salmon (omega-3)</li>
+                                            <li>1/2 bell pepper (95mg vitamin C)</li>
+                                            <li>Olive oil & lemon dressing</li>
+                                        </ul>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #6c757d;">
+                                        <div><strong>Iron:</strong> 9.7mg</div>
+                                        <div><strong>Omega-3:</strong> 1.8g</div>
+                                        <div><strong>Fiber:</strong> 12g</div>
+                                        <div><strong>Calories:</strong> 485</div>
+                                    </div>
+                                </div>
+
+                                <!-- Dinner -->
+                                <div class="meal-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                        <span style="font-size: 20px; margin-right: 8px;">🌙</span>
+                                        <h4 style="margin: 0; color: #2c3e50; font-weight: 600;">DINNER</h4>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                        <strong style="color: #2c3e50;">Lean Beef with Sweet Potato</strong>
+                                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #2c3e50;">
+                                            <li>3oz lean beef (3.5mg iron)</li>
+                                            <li>1 medium roasted sweet potato</li>
+                                            <li>1 cup steamed broccoli (vitamin C)</li>
+                                            <li>1/4 cup quinoa (complex carbs)</li>
+                                        </ul>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #6c757d;">
+                                        <div><strong>Iron:</strong> 4.2mg</div>
+                                        <div><strong>Protein:</strong> 28g</div>
+                                        <div><strong>Fiber:</strong> 9g</div>
+                                        <div><strong>Calories:</strong> 520</div>
+                                    </div>
+                                </div>
+
+                                <!-- Snacks -->
+                                <div class="meal-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                        <span style="font-size: 20px; margin-right: 8px;">🥜</span>
+                                        <h4 style="margin: 0; color: #2c3e50; font-weight: 600;">SNACKS</h4>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                                        <strong style="color: #2c3e50;">Heart-Healthy Options</strong>
+                                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #2c3e50;">
+                                            <li>1oz walnuts (2.5g omega-3)</li>
+                                            <li>1 apple with skin (4g fiber)</li>
+                                            <li>1 cup green tea (antioxidants)</li>
+                                            <li>2 tbsp pumpkin seeds (iron, magnesium)</li>
+                                        </ul>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #6c757d;">
+                                        <div><strong>Iron:</strong> 2.1mg</div>
+                                        <div><strong>Healthy Fats:</strong> 18g</div>
+                                        <div><strong>Fiber:</strong> 6g</div>
+                                        <div><strong>Calories:</strong> 285</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Daily Totals -->
+                            <div style="background: #f8f9fa; color: #2c3e50; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; border: 1px solid #e9ecef;">
+                                <h4 style="margin: 0 0 15px 0; font-weight: 600; color: #2c3e50; font-size: 18px;">DAILY NUTRITIONAL TARGETS</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">34.2mg</div>
+                                        <div style="font-size: 14px; color: #6c757d;">Iron (Target: 18mg)</div>
+                                        <div style="font-size: 13px; color: #198754;">✅ 190% of target</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">35g</div>
+                                        <div style="font-size: 14px; color: #6c757d;">Fiber (Target: 25g)</div>
+                                        <div style="font-size: 13px; color: #198754;">✅ 140% of target</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">4.3g</div>
+                                        <div style="font-size: 14px; color: #6c757d;">Omega-3 (Target: 1.1g)</div>
+                                        <div style="font-size: 13px; color: #198754;">✅ 390% of target</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">1,710</div>
+                                        <div style="font-size: 14px; color: #6c757d;">Calories</div>
+                                        <div style="font-size: 13px; color: #198754;">Appropriate for recovery</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sign Up Modal Button -->
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button onclick="openSignUpModal()" style="background: #0d6efd; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            Sign Up to Receive Weekly Meal Plan & Coupons Customized for You
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <!-- Current Medications -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M6.5,20.5L17.5,9.5C18.28,8.72 18.28,7.47 17.5,6.69L12.31,1.5C11.53,0.72 10.28,0.72 9.5,1.5L8.5,2.5L11.5,5.5L10.09,6.91L7.09,3.91L6.09,4.91L9.09,7.91L7.68,9.32L4.68,6.32L3.68,7.32L6.68,10.32L5.27,11.73L2.27,8.73L1.27,9.73L4.27,12.73L2.86,14.14L5.86,17.14L14.14,8.86L17.14,11.86L18.55,10.45L6.5,20.5Z"/>
+                        </svg>
+                        Current Medications
+                    </div>
+                    <ul class="medication-list">
+                        <li class="medication-item">
+                            <div>
+                                <div class="med-name">Iron Sulfate 325mg</div>
+                                <div class="med-dosage">Once daily with food</div>
+                                <div class="med-date">Started: Jul 20, 2025</div>
+                            </div>
+                        </li>
+                        <li class="medication-item">
+                            <div>
+                                <div class="med-name">Atorvastatin 20mg</div>
+                                <div class="med-dosage">Once daily at bedtime</div>
+                                <div class="med-date">Started: May 15, 2025</div>
+                            </div>
+                        </li>
+                        <li class="medication-item">
+                            <div>
+                                <div class="med-name">Multivitamin</div>
+                                <div class="med-dosage">Once daily with breakfast</div>
+                                <div class="med-date">Started: Jan 10, 2025</div>
+                            </div>
+                        </li>
+                        <li class="medication-item">
+                            <div>
+                                <div class="med-name">Ibuprofen 400mg</div>
+                                <div class="med-dosage">As needed for joint pain</div>
+                                <div class="med-date">Started: Jul 25, 2025</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Vital Signs -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M19,14H15A3,3 0 0,1 12,11A3,3 0 0,1 15,8H19A1,1 0 0,1 20,9V13A1,1 0 0,1 19,14M15,10A1,1 0 0,0 14,11A1,1 0 0,0 15,12A1,1 0 0,0 16,11A1,1 0 0,0 15,10M12.5,2C13,2 13.5,2.17 13.9,2.45L21.6,8.82C22.08,9.21 22.39,9.76 22.5,10.37C22.61,11 22.5,11.64 22.17,12.22L17.63,20.29C17.25,20.93 16.61,21.36 15.87,21.5C15.13,21.64 14.37,21.47 13.77,21.05L7.45,16.8C6.85,16.38 6.5,15.73 6.5,15.04V9.96C6.5,9.27 6.85,8.62 7.45,8.2L13.77,3.95C14.12,3.73 14.56,3.61 15,3.61C15.44,3.61 15.88,3.73 16.23,3.95L18.4,5.5L12.5,2M15,5L12,8H15A2,2 0 0,1 17,10A2,2 0 0,1 15,12H12L15,15H19L15,5Z"/>
+                        </svg>
+                        Recent Vitals
+                    </div>
+                    <div class="vitals-grid">
+                        <div class="vital-card">
+                            <div class="vital-value">118/75</div>
+                            <div class="vital-label">BP (mmHg)</div>
+                        </div>
+                        <div class="vital-card">
+                            <div class="vital-value">72</div>
+                            <div class="vital-label">Heart Rate</div>
+                        </div>
+                        <div class="vital-card">
+                            <div class="vital-value">98.6°F</div>
+                            <div class="vital-label">Temperature</div>
+                        </div>
+                        <div class="vital-card">
+                            <div class="vital-value">98%</div>
+                            <div class="vital-label">O2 Sat</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Navigation -->
+                <nav id="sectionNav" class="card">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z"/>
+                        </svg>
+                        Section Navigation
+                    </div>
+                    <div class="nav-links">
+                        <!-- Data & Insights Sections -->
+                        <div class="nav-group">
+                            <div class="nav-group-title">Data & Insights</div>
+                            <a href="#integrated-findings" class="nav-link" data-section="integrated-findings" data-tab="lab-results">
+                                <span class="nav-icon">🔍</span>
+                                <span class="nav-text">Integrated Findings</span>
+                            </a>
+                            <a href="#biosensor-insights" class="nav-link" data-section="biosensor-insights" data-tab="lab-results">
+                                <span class="nav-icon">📊</span>
+                                <span class="nav-text">Biosensor Insights</span>
+                            </a>
+                            <a href="#trend-trajectory" class="nav-link" data-section="trend-trajectory" data-tab="lab-results">
+                                <span class="nav-icon">📈</span>
+                                <span class="nav-text">Trend Trajectory</span>
+                            </a>
+                            <a href="#diagnostic-shortlist" class="nav-link" data-section="diagnostic-shortlist" data-tab="lab-results">
+                                <span class="nav-icon">🩺</span>
+                                <span class="nav-text">Diagnostic Shortlist</span>
+                            </a>
+                        </div>
+
+                        <!-- Data Sources -->
+                        <div class="nav-group">
+                            <div class="nav-group-title">Data Sources</div>
+                            <a href="#lab-results" class="nav-link" data-section="lab-results" data-tab="lab-results">
+                                <span class="nav-icon">🧪</span>
+                                <span class="nav-text">Current Lab Report</span>
+                            </a>
+                            <a href="#trends" class="nav-link" data-section="trends" data-tab="trends">
+                                <span class="nav-icon">📊</span>
+                                <span class="nav-text">Trends</span>
+                            </a>
+                            <a href="#symptoms" class="nav-link" data-section="symptoms" data-tab="symptoms">
+                                <span class="nav-icon">📈</span>
+                                <span class="nav-text">Symptom Tracking</span>
+                            </a>
+                            <a href="#wearables" class="nav-link" data-section="wearables" data-tab="wearables">
+                                <span class="nav-icon">⌚</span>
+                                <span class="nav-text">Wearables Data</span>
+                            </a>
+                            <a href="#nutrition" class="nav-link" data-section="nutrition" data-tab="nutrition">
+                                <span class="nav-icon">🍎</span>
+                                <span class="nav-text">Your Nutritional Insights</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+
+
+
+    </div>
+
+    <script>
+        // Simplified Mobile-Friendly Tab Management System
+        class MobileTabManager {
+            constructor() {
+                this.currentActiveTab = 'lab-results';
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                // Store the instance globally to support legacy code
+                window.mobileTabManager = this;
+            }
+
+            bindEvents() {
+                const tabs = document.querySelectorAll('.tab');
+
+                tabs.forEach(tab => {
+                    // Remove all previous listeners to ensure clean slate
+                    const newTab = tab.cloneNode(true);
+                    tab.parentNode.replaceChild(newTab, tab);
+
+                    // Single simplified click handler
+                    newTab.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.handleTabClick(e);
+                    }, { passive: false });
+
+                    // Also try touchend as a fallback
+                    newTab.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const tabId = newTab.getAttribute('data-tab');
+                        this.switchTab(tabId, newTab);
+                    }, { passive: false });
+                });
+            }
+
+            handleTabClick(e) {
+                const tab = e.currentTarget || e.target;
+                const tabId = tab.getAttribute('data-tab');
+                this.switchTab(tabId, tab);
+            }
+
+            switchTab(tabId, clickedTab) {
+                try {
+                    // Prevent switching to the same tab
+                    if (tabId === this.currentActiveTab) {
+                        return;
+                    }
+                    
+                    // Hide all tab contents
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Remove active from all tabs
+                    document.querySelectorAll('.tab').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    
+                    // Show selected tab content
+                    const tabContent = document.getElementById(tabId);
+                    if (tabContent) {
+                        tabContent.classList.add('active');
+                    }
+                    
+                    // Mark clicked tab as active
+                    if (clickedTab) {
+                        clickedTab.classList.add('active');
+                    }
+                    
+                    // Update current active tab
+                    this.currentActiveTab = tabId;
+                    
+                    // Initialize charts when tabs are shown
+                    this.initializeTabContent(tabId);
+                    
+                    // Show/hide wearables insights section
+                    const wearablesInsightsSection = document.getElementById('wearables-insights-section');
+
+                    if (tabId === 'wearables') {
+                        // Show wearables insights
+                        if (wearablesInsightsSection) wearablesInsightsSection.style.display = 'block';
+                    } else {
+                        // Hide wearables insights
+                        if (wearablesInsightsSection) wearablesInsightsSection.style.display = 'none';
+                    }
+                    
+                    // Scroll to top of tab content on mobile
+                    if (window.innerWidth <= 768) {
+                        tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    
+                    // Add haptic feedback for successful tab switch
+                    if (navigator.vibrate) {
+                        navigator.vibrate(20);
+                    }
+                    
+                } catch (error) {
+                    console.error('Tab switching error:', error);
+                }
+            }
+
+            initializeTabContent(tabId) {
+                // Add a small delay to ensure the tab is visible before initializing charts
+                setTimeout(() => {
+                    switch(tabId) {
+                        case 'symptoms':
+                            this.initSymptomsChart();
+                            break;
+                        case 'wearables':
+                            this.initWearablesChart();
+                            break;
+                        case 'trends':
+                            this.initTrendsChart();
+                            break;
+                    }
+                }, 100);
+            }
+
+            // Chart initialization methods
+            initSymptomsChart() {
+                try {
+                    const ctx = document.getElementById('symptomsChart');
+                    if (!ctx || !window.Chart) return;
+                    
+                    // Destroy existing chart if it exists
+                    if (window.symptomsChartInstance) {
+                        window.symptomsChartInstance.destroy();
+                    }
+                    
+                    window.symptomsChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jul 22', 'Jul 23', 'Jul 24', 'Jul 25', 'Jul 26', 'Jul 27', 'Jul 28'],
+                            datasets: [{
+                                label: 'Fatigue',
+                                data: [4, 5, 6, 7, 6, 7, 6],
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                tension: 0.4
+                            }, {
+                                label: 'Headaches',
+                                data: [3, 4, 4, 5, 4, 4, 4],
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                tension: 0.4
+                            }, {
+                                label: 'Joint Pain',
+                                data: [5, 6, 6, 7, 7, 8, 7],
+                                borderColor: '#9b59b6',
+                                backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                                tension: 0.4
+                            }, {
+                                label: 'Dizziness',
+                                data: [4, 4, 3, 3, 2, 3, 3],
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 10,
+                                    title: {
+                                        display: true,
+                                        text: 'Severity (0-10)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Symptoms chart initialization error:', error);
+                }
+            }
+
+            initWearablesChart() {
+                try {
+                    const ctx = document.getElementById('wearablesChart');
+                    if (!ctx || !window.Chart) return;
+                    
+                    // Destroy existing chart if it exists
+                    if (window.wearablesChartInstance) {
+                        window.wearablesChartInstance.destroy();
+                    }
+                    
+                    window.wearablesChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jul 22', 'Jul 23', 'Jul 24', 'Jul 25', 'Jul 26', 'Jul 27', 'Jul 28'],
+                            datasets: [{
+                                label: 'Daily Steps (thousands)',
+                                data: [6.2, 5.8, 5.1, 4.7, 4.2, 4.8, 4.6],
+                                borderColor: '#11998e',
+                                backgroundColor: 'rgba(17, 153, 142, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Sleep Hours',
+                                data: [6.5, 6.2, 5.8, 5.5, 4.9, 5.1, 5.2],
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y1'
+                            }, {
+                                label: 'Resting HR (bpm)',
+                                data: [72, 74, 75, 76, 78, 77, 78],
+                                borderColor: '#fc466b',
+                                backgroundColor: 'rgba(252, 70, 107, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y2'
+                            }, {
+                                label: 'HRV (ms)',
+                                data: [35, 32, 30, 29, 27, 28, 28],
+                                borderColor: '#3b41c5',
+                                backgroundColor: 'rgba(59, 65, 197, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y3'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Date'
+                                    }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: 'Steps (thousands)'
+                                    },
+                                    min: 0,
+                                    max: 10
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'right',
+                                    min: 0,
+                                    max: 10
+                                },
+                                y2: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'right',
+                                    min: 60,
+                                    max: 90
+                                },
+                                y3: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'right',
+                                    min: 20,
+                                    max: 40
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Wearables chart initialization error:', error);
+                }
+            }
+
+            initTrendsChart() {
+                try {
+                    const ctx = document.getElementById('trendsChart');
+                    if (!ctx || !window.Chart) return;
+                    
+                    // Destroy existing chart if it exists
+                    if (window.trendsChartInstance) {
+                        window.trendsChartInstance.destroy();
+                    }
+                    
+                    window.trendsChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                            datasets: [{
+                                label: 'Hemoglobin (g/dL)',
+                                data: [12.1, 11.8, 11.5, 11.2, 10.9, 10.8],
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Iron (μg/dL) ÷ 10',
+                                data: [6.5, 5.8, 5.2, 4.8, 4.6, 4.5],
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Cholesterol (mg/dL)',
+                                data: [220, 225, 230, 238, 245, 248],
+                                borderColor: '#8e44ad',
+                                backgroundColor: 'rgba(142, 68, 173, 0.1)',
+                                tension: 0.4,
+                                yAxisID: 'y1'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Month'
+                                    }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: 'Hemoglobin (g/dL) • Iron (μg/dL) ÷ 10'
+                                    },
+                                    min: 4,
+                                    max: 16
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: 'Cholesterol (mg/dL)'
+                                    },
+                                    min: 150,
+                                    max: 300,
+                                    grid: {
+                                        drawOnChartArea: false,
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Trends chart initialization error:', error);
+                }
+            }
+        }
+
+        // Initialize the mobile tab manager when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize the mobile-friendly tab system
+                new MobileTabManager();
+
+                // Add interactive effects for cards
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.addEventListener('mouseenter', function() {
+                        if (window.innerWidth > 768) { // Only on desktop
+                            this.style.transform = 'translateY(-4px)';
+                        }
+                    });
+                    card.addEventListener('mouseleave', function() {
+                        if (window.innerWidth > 768) { // Only on desktop
+                            this.style.transform = 'translateY(0)';
+                        }
+                    });
+                });
+
+                // Animate progress bars
+                const progressBars = document.querySelectorAll('.progress-fill');
+                progressBars.forEach(bar => {
+                    const width = bar.style.width;
+                    bar.style.width = '0%';
+                    setTimeout(() => {
+                        bar.style.width = width;
+                    }, 500);
+                });
+
+                // Add orientation change handler for mobile
+                window.addEventListener('orientationchange', function() {
+                    setTimeout(() => {
+                        // Trigger chart resize if needed
+                        if (window.symptomsChartInstance) window.symptomsChartInstance.resize();
+                        if (window.wearablesChartInstance) window.wearablesChartInstance.resize();
+                        if (window.trendsChartInstance) window.trendsChartInstance.resize();
+                    }, 500);
+                });
+
+            } catch (error) {
+                console.error('Dashboard initialization error:', error);
+            }
+        });
+
+        // Legacy function for backward compatibility
+        function showTab(tabId, element) {
+            if (window.mobileTabManager) {
+                window.mobileTabManager.switchTab(tabId, element);
+            }
+        }
+
+        // Section Navigation System
+        class SectionNavigator {
+            constructor() {
+                // Sections within the Data & Insights tab (lab-results)
+                this.currentTabSections = [
+                    'integrated-findings',
+                    'biosensor-insights',
+                    'trend-trajectory',
+                    'diagnostic-shortlist'
+                ];
+                // Other tabs that can be navigated to
+                this.crossTabSections = [
+                    'lab-results',
+                    'trends',
+                    'symptoms',
+                    'wearables',
+                    'nutrition'
+                ];
+                this.allSections = [...this.currentTabSections, ...this.crossTabSections];
+                this.navLinks = {};
+                this.sectionElements = {};
+                this.mobileTabManager = null;
+                this.init();
+            }
+
+            init() {
+                // Wait for MobileTabManager to be available
+                setTimeout(() => {
+                    this.mobileTabManager = window.mobileTabManager;
+                }, 100);
+
+                // Cache DOM elements for current tab sections
+                this.currentTabSections.forEach(sectionId => {
+                    this.navLinks[sectionId] = document.querySelector(`[data-section="${sectionId}"]`);
+                    this.sectionElements[sectionId] = document.getElementById(sectionId);
+                });
+
+                // Cache DOM elements for cross-tab sections
+                this.crossTabSections.forEach(sectionId => {
+                    this.navLinks[sectionId] = document.querySelector(`[data-section="${sectionId}"]`);
+                    this.sectionElements[sectionId] = document.getElementById(sectionId);
+                });
+
+                // Add click listeners for all navigation links
+                this.allSections.forEach(sectionId => {
+                    const link = this.navLinks[sectionId];
+                    if (link) {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.handleNavigation(sectionId, link);
+                        });
+                    }
+                });
+
+                // Add scroll listener for active section detection
+                window.addEventListener('scroll', () => this.updateActiveSection());
+
+                // Listen for tab changes
+                this.setupTabChangeListener();
+
+                // Initial active section update
+                this.updateActiveSection();
+            }
+
+            handleNavigation(sectionId, link) {
+                const targetTab = link.getAttribute('data-tab');
+                const currentTab = this.getCurrentActiveTab();
+
+                if (targetTab && targetTab !== currentTab) {
+                    // Cross-tab navigation needed
+                    this.navigateToTab(targetTab, sectionId);
+                } else if (targetTab && targetTab === currentTab) {
+                    // Same tab, just scroll to section
+                    this.scrollToSection(sectionId);
+                } else {
+                    // Fallback for sections without data-tab (shouldn't happen now)
+                    this.scrollToSection(sectionId);
+                }
+            }
+
+            navigateToTab(tabId, sectionId) {
+                if (this.mobileTabManager) {
+                    // Switch to the target tab
+                    const tabButton = document.querySelector(`[data-tab="${tabId}"]`);
+                    if (tabButton) {
+                        this.mobileTabManager.switchTab(tabId, tabButton);
+
+                        // Wait for tab switch to complete, then scroll to section
+                        setTimeout(() => {
+                            if (sectionId && sectionId !== tabId) {
+                                // Scroll to specific section within the tab
+                                this.scrollToSection(sectionId);
+                            } else {
+                                // Just scroll to top of the tab content
+                                const tabContent = document.getElementById(tabId);
+                                if (tabContent) {
+                                    tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                            }
+
+                            // Update active state after navigation with additional delay
+                            setTimeout(() => {
+                                this.updateActiveSection();
+                            }, 100);
+                        }, 200); // Increased delay to ensure tab content is fully loaded
+                    }
+                }
+            }
+
+            scrollToSection(sectionId) {
+                const element = this.sectionElements[sectionId];
+                if (element) {
+                    const offsetTop = element.offsetTop - 100; // Account for sticky header
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            updateActiveSection() {
+                const scrollPosition = window.scrollY + 200; // Offset for better detection
+                let activeSection = null;
+
+                // Get current active tab
+                const currentTab = this.getCurrentActiveTab();
+
+                // Check Data & Insights tab sections (lab-results)
+                if (currentTab === 'lab-results') {
+                    // Check all sections within the Data & Insights tab
+                    this.currentTabSections.forEach(sectionId => {
+                        const element = this.sectionElements[sectionId];
+                        if (element && this.isElementVisible(element)) {
+                            const elementTop = element.offsetTop;
+                            const elementBottom = elementTop + element.offsetHeight;
+
+                            if (scrollPosition >= elementTop && scrollPosition < elementBottom) {
+                                activeSection = sectionId;
+                            }
+                        }
+                    });
+
+                    // If no specific section is active, use the first visible one
+                    if (!activeSection) {
+                        for (let sectionId of this.currentTabSections) {
+                            const element = this.sectionElements[sectionId];
+                            if (element && this.isElementVisible(element) && element.offsetTop > scrollPosition - 200) {
+                                activeSection = sectionId;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // For other tabs (symptoms, wearables, trends), mark the tab itself as active
+                    if (this.crossTabSections.includes(currentTab)) {
+                        activeSection = currentTab;
+                    }
+                }
+
+                // Update active states for all navigation links
+                Object.entries(this.navLinks).forEach(([sectionId, link]) => {
+                    if (link) {
+                        if (sectionId === activeSection) {
+                            link.classList.add('active');
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    }
+                });
+            }
+
+            getCurrentActiveTab() {
+                if (this.mobileTabManager) {
+                    return this.mobileTabManager.currentActiveTab;
+                }
+                // Fallback: check which tab content is visible
+                const tabs = ['lab-results', 'symptoms', 'wearables', 'trends'];
+                for (let tabId of tabs) {
+                    const tabContent = document.getElementById(tabId);
+                    if (tabContent && tabContent.classList.contains('active')) {
+                        return tabId;
+                    }
+                }
+                return 'lab-results'; // Default
+            }
+
+            isElementVisible(element) {
+                return element && element.offsetParent !== null;
+            }
+
+            setupTabChangeListener() {
+                // Listen for clicks on tab buttons to update navigation
+                const tabButtons = document.querySelectorAll('.tab');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        // Update active section after tab switch
+                        setTimeout(() => {
+                            this.updateActiveSection();
+                        }, 200);
+                    });
+                });
+            }
+        }
+
+        // Initialize section navigation when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new SectionNavigator();
+        });
+
+        // Sign Up Modal Functions
+        function openSignUpModal() {
+            document.getElementById('signUpModal').style.display = 'block';
+        }
+
+        function closeSignUpModal() {
+            document.getElementById('signUpModal').style.display = 'none';
+        }
+
+        // Coupon Functions
+        function openSupplementCoupons() {
+            // This would typically redirect to a coupon page or open a modal with coupons
+            alert('Supplement coupons coming soon! You\'ll be redirected to our partner discount page.');
+            // Example: window.open('https://supplements.example.com/coupons', '_blank');
+        }
+
+        function openNutritionalCoupons() {
+            // This would typically redirect to a coupon page or open a modal with coupons
+            alert('Nutritional product coupons coming soon! You\'ll be redirected to our partner discount page.');
+            // Example: window.open('https://nutrition.example.com/coupons', '_blank');
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('signUpModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Handle form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const signUpForm = document.getElementById('signUpForm');
+            if (signUpForm) {
+                signUpForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    // Get form data
+                    const formData = new FormData(this);
+                    const email = formData.get('email');
+                    const firstName = formData.get('firstName');
+                    const conditions = formData.get('conditions');
+
+                    // Here you would typically send the data to your server
+                    console.log('Sign up data:', { email, firstName, conditions });
+
+                    // Show success message
+                    alert('Thank you for signing up! You\'ll receive your personalized meal plan within 24 hours.');
+
+                    // Close modal
+                    closeSignUpModal();
+
+                    // Reset form
+                    this.reset();
+                });
+            }
+        });
+    </script>
+
+    <!-- Sign Up Modal -->
+    <div id="signUpModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: none; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e9ecef;">
+                <h2 style="margin: 0; color: #2c3e50; font-size: 24px; font-weight: 600;">Get Your Personalized Nutrition Plan</h2>
+                <span class="close" onclick="closeSignUpModal()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="color: #6c757d; margin-bottom: 20px; line-height: 1.5;">Join thousands who are transforming their health with personalized meal plans and exclusive savings on healthy foods.</p>
+
+                <form id="signUpForm" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label for="email" style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600;">Email Address</label>
+                        <input type="email" id="email" name="email" required style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="firstName" style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600;">First Name</label>
+                        <input type="text" id="firstName" name="firstName" required style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="conditions" style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600;">Primary Health Focus (Optional)</label>
+                        <select id="conditions" name="conditions" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                            <option value="">Select your primary concern</option>
+                            <option value="iron-deficiency">Iron Deficiency Anemia</option>
+                            <option value="high-cholesterol">High Cholesterol</option>
+                            <option value="inflammation">Joint Pain & Inflammation</option>
+                            <option value="energy">Low Energy & Fatigue</option>
+                            <option value="general">General Wellness</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                        <input type="checkbox" id="newsletter" name="newsletter" checked style="margin: 0;">
+                        <label for="newsletter" style="color: #6c757d; font-size: 13px; margin: 0;">I agree to receive weekly meal plans, health tips, and exclusive coupons via email.</label>
+                    </div>
+
+                    <button type="submit" style="background: #0d6efd; color: white; border: none; padding: 15px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px;">
+                        Get My Personalized Plan
+                    </button>
+                </form>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <p style="color: #6c757d; font-size: 12px; margin: 0;">We respect your privacy. Unsubscribe at any time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

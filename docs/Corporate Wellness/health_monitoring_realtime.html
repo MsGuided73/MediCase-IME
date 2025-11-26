@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<!-- saved from url=(0096)file:///C:/Users/benso/AppData/Local/Microsoft/Windows/INetCache/IE/3KJC4OGW/hrdashboard[1].html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Employee Health Management</title>
+    <script src="./health_monitoring_realtime_files/chart.min.js.download"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: -1px;
+            color: white;
+        }
+
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 400;
+            color: white;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .real-time-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: #27ae60;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .real-time-indicator:hover {
+            background: #229954;
+            transform: scale(1.05);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .time-range-selector {
+            background: rgba(255,255,255,0.95);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #2c3e50;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-width: 120px;
+        }
+
+        .time-range-selector:focus {
+            outline: none;
+            background: white;
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        .time-range-selector option {
+            color: #2c3e50;
+            background: white;
+            padding: 5px;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .interactive-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .control-input {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            background: white;
+            color: #2c3e50;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .control-input option {
+            color: #2c3e50;
+            background: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e8ecef;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+
+        .card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .metric-card:hover::after {
+            left: 100%;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+            color: #667eea;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .metric-value.updating {
+            color: #f39c12;
+            transform: scale(1.05);
+        }
+
+        .metric-label {
+            font-size: 1rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .metric-change {
+            font-size: 0.9rem;
+            margin-top: 5px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .positive {
+            color: #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .negative {
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .chart-small {
+            height: 250px;
+        }
+
+        .department-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .department-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .department-item:hover {
+            background: #f8f9fa;
+            margin: 0 -15px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .department-item:last-child {
+            border-bottom: none;
+        }
+
+        .department-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .department-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .department-score span {
+            color: #2c3e50;
+            font-weight: 600;
+            min-width: 30px;
+        }
+
+        .score-bar {
+            width: 80px;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+            position: relative;
+        }
+
+        .score-excellent {
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+
+        .score-good {
+            background: linear-gradient(90deg, #f39c12, #f1c40f);
+        }
+
+        .score-needs-attention {
+            background: linear-gradient(90deg, #e74c3c, #ec7063);
+        }
+
+        .activity-feed {
+            max-height: 300px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: #f8f9fa;
+            margin: 0 -15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+
+        .activity-item strong {
+            color: #2c3e50;
+        }
+
+        .activity-item small {
+            color: #7f8c8d !important;
+        }
+
+        .activity-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .activity-new {
+            background: #74b9ff;
+            color: white;
+        }
+
+        .activity-alert {
+            background: #fd79a8;
+            color: white;
+        }
+
+        .activity-success {
+            background: #00b894;
+            color: white;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-btn:hover:not(.active) {
+            background: #f8f9fa;
+            transform: translateY(-1px);
+        }
+
+        .recommendation-card {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            border: none;
+            color: #2d3436;
+        }
+
+        .recommendation-item {
+            background: rgba(255,255,255,0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-item:hover {
+            background: rgba(255,255,255,0.6);
+            transform: translateY(-2px);
+        }
+
+        .recommendation-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .recommendation-item strong {
+            color: #2d3436;
+            font-weight: 700;
+        }
+
+        .priority-high {
+            border-left: 4px solid #e74c3c;
+        }
+
+        .priority-medium {
+            border-left: 4px solid #f39c12;
+        }
+
+        .priority-low {
+            border-left: 4px solid #27ae60;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(39, 174, 96, 0.3);
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-weight: 600;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .auto-refresh {
+            background: rgba(255,255,255,0.95);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #2c3e50;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .auto-refresh:hover {
+            background: white;
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        .auto-refresh.active {
+            background: #27ae60;
+            color: white;
+            border-color: #27ae60;
+        }
+
+        .threshold-display {
+            color: #7f8c8d !important;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification">All Departments - week: 73% engagement</div>
+
+    <div class="dashboard">
+        <div class="header">
+            <div>
+                <h1>Real-time Employee Health Management</h1>
+            </div>
+            <div class="header-controls">
+                <select class="time-range-selector" id="timeRange">
+                    <option value="today">Today</option>
+                    <option value="week" selected="">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                </select>
+                <button class="auto-refresh" id="autoRefresh" onclick="toggleAutoRefresh()">
+                    Auto-Refresh: OFF
+                </button>
+                <div class="real-time-indicator" onclick="forceRefresh()">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="interactive-controls">
+                <div class="control-group">
+                    <label class="control-label">Department Filter</label>
+                    <select class="control-input" id="departmentFilter">
+                        <option value="all">All Departments</option>
+                        <option value="retail">Retail Stores</option>
+                        <option value="distribution">Distribution Centers</option>
+                        <option value="corporate">Corporate Office</option>
+                        <option value="pharmacy">Pharmacy</option>
+                        <option value="manufacturing">Manufacturing</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Risk Level</label>
+                    <select class="control-input" id="riskFilter">
+                        <option value="all">All Risk Levels</option>
+                        <option value="high">High Risk Only</option>
+                        <option value="medium">Medium Risk</option>
+                        <option value="low">Low Risk</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Alert Threshold</label>
+                    <input type="range" class="control-input" id="alertThreshold" min="1" max="50" value="25" oninput="updateThresholdDisplay(this.value)">
+                    <small id="thresholdDisplay" class="threshold-display">25 alerts</small>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Data View</label>
+                    <select class="control-input" id="dataView">
+                        <option value="summary">Summary View</option>
+                        <option value="detailed">Detailed View</option>
+                        <option value="trends">Trends Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-4">
+                <div class="card metric-card" onclick="drillDown(&#39;users&#39;)">
+                    <div class="loading-overlay" id="loading1"><div class="spinner"></div></div>
+                    <div class="metric-label">Active Users</div>
+                    <div class="metric-value" id="activeUsers">185,623</div>
+                    <div class="metric-change positive" id="usersChange">+2,847 this week</div>
+                </div>
+                <div class="card metric-card" onclick="drillDown(&#39;engagement&#39;)">
+                    <div class="loading-overlay" id="loading2"><div class="spinner"></div></div>
+                    <div class="metric-label">Engagement Rate</div>
+                    <div class="metric-value" id="engagementRate">73%</div>
+                    <div class="metric-change positive" id="engagementChange">+2.3%</div>
+                </div>
+                <div class="card metric-card" onclick="drillDown(&#39;alerts&#39;)">
+                    <div class="loading-overlay" id="loading3"><div class="spinner"></div></div>
+                    <div class="metric-label">Risk Alerts</div>
+                    <div class="metric-value" id="riskAlerts">23</div>
+                    <div class="metric-change negative" id="alertsChange">+5 this week</div>
+                </div>
+                <div class="card metric-card" onclick="drillDown(&#39;interventions&#39;)">
+                    <div class="loading-overlay" id="loading4"><div class="spinner"></div></div>
+                    <div class="metric-label">Interventions</div>
+                    <div class="metric-value" id="interventions">12</div>
+                    <div class="metric-change positive" id="interventionsChange">+3 scheduled</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="loading-overlay" id="loading5"><div class="spinner"></div></div>
+                    <h3>Risk Distribution by Category</h3>
+                    <div class="chart-container chart-small">
+                        <canvas id="riskDistribution" width="583" height="250" style="display: block; box-sizing: border-box; height: 250px; width: 583px;"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="loading-overlay" id="loading6"><div class="spinner"></div></div>
+                    <h3>Real-time Activity Feed</h3>
+                    <div class="activity-feed" id="activityFeed">
+                <div class="activity-item" style="animation-delay: 0s">
+                    <div class="activity-icon activity-alert">⚠</div>
+                    <div>
+                        <strong>High stress detected</strong><br>
+                        Employee ID #4521 - Store #245
+                        <small style="color: #7f8c8d; display: block; margin-top: 3px;">2 min ago</small>
+                    </div>
+                </div>
+            
+
+            
+                <div class="activity-item" style="animation-delay: 0.2s">
+                    <div class="activity-icon activity-new">📊</div>
+                    <div>
+                        <strong>New biometric screening</strong><br>
+                        Corporate Office - 15 employees
+                        <small style="color: #7f8c8d; display: block; margin-top: 3px;">12 min ago</small>
+                    </div>
+                </div>
+            
+                <div class="activity-item" style="animation-delay: 0.30000000000000004s">
+                    <div class="activity-icon activity-alert">⚠</div>
+                    <div>
+                        <strong>Absence pattern detected</strong><br>
+                        Store #189 - 3 employees
+                        <small style="color: #7f8c8d; display: block; margin-top: 3px;">18 min ago</small>
+                    </div>
+                </div>
+            
+                <div class="activity-item" style="animation-delay: 0.4s">
+                    <div class="activity-icon activity-success">🎯</div>
+                    <div>
+                        <strong>Intervention completed</strong><br>
+                        Mental health counseling session
+                        <small style="color: #7f8c8d; display: block; margin-top: 3px;">25 min ago</small>
+                    </div>
+                </div>
+            </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="loading-overlay" id="loading7"><div class="spinner"></div></div>
+                    <h3>Departmental Health Comparison</h3>
+                    <div class="filters">
+                        <button class="filter-btn active" data-filter="all">All Departments</button>
+                        <button class="filter-btn" data-filter="stores">Stores</button>
+                        <button class="filter-btn" data-filter="distribution">Distribution</button>
+                        <button class="filter-btn" data-filter="corporate">Corporate</button>
+                    </div>
+                    <div class="department-list" id="departmentList">
+                <div class="department-item" onclick="drillDownDepartment(&#39;Retail Stores&#39;)">
+                    <div class="department-name">Retail Stores</div>
+                    <div class="department-score">
+                        <span>7.2</span>
+                        <div class="score-bar">
+                            <div class="score-fill score-good" style="width: 72%"></div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="department-item" onclick="drillDownDepartment(&#39;Distribution Centers&#39;)">
+                    <div class="department-name">Distribution Centers</div>
+                    <div class="department-score">
+                        <span>8.1</span>
+                        <div class="score-bar">
+                            <div class="score-fill score-excellent" style="width: 81%"></div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="department-item" onclick="drillDownDepartment(&#39;Corporate Office&#39;)">
+                    <div class="department-name">Corporate Office</div>
+                    <div class="department-score">
+                        <span>6.8</span>
+                        <div class="score-bar">
+                            <div class="score-fill score-good" style="width: 68%"></div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="department-item" onclick="drillDownDepartment(&#39;Pharmacy&#39;)">
+                    <div class="department-name">Pharmacy</div>
+                    <div class="department-score">
+                        <span>7.8</span>
+                        <div class="score-bar">
+                            <div class="score-fill score-excellent" style="width: 78%"></div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="department-item" onclick="drillDownDepartment(&#39;Manufacturing&#39;)">
+                    <div class="department-name">Manufacturing</div>
+                    <div class="department-score">
+                        <span>6.4</span>
+                        <div class="score-bar">
+                            <div class="score-fill score-needs-attention" style="width: 64%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                </div>
+                <div class="card recommendation-card">
+                    <div class="loading-overlay" id="loading8"><div class="spinner"></div></div>
+                    <h3>Automated Recommendations</h3>
+                    <div id="recommendationsList">
+                <div class="recommendation-item priority-high" onclick="implementRecommendation(&#39;Manufacturing dept wellness declining&#39;)">
+                    <strong>HIGH PRIORITY</strong><br>
+                    Manufacturing dept wellness declining. Schedule stress management workshop this week.
+                </div>
+            
+
+            </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="loading-overlay" id="loading9"><div class="spinner"></div></div>
+                <h3>Weekly Engagement Trends</h3>
+                <div class="chart-container">
+                    <canvas id="engagementTrends" width="1258" height="300" style="display: block; box-sizing: border-box; height: 300px; width: 1258px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let riskChart = null;
+        let engagementChart = null;
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+        let isUpdating = false; // Prevent multiple simultaneous updates
+
+        // Comprehensive mock data with DRAMATIC department differences for visibility
+        const mockData = {
+            today: {
+                all: { users: 185456, engagement: 68, alerts: 12, interventions: 3, usersChange: '+1,234 today', engagementChange: '+1.2%', alertsChange: '+2 today', interventionsChange: '+1 today' },
+                retail: { users: 823, engagement: 52, alerts: 8, interventions: 2, usersChange: '+28 today', engagementChange: '+0.8%', alertsChange: '+1 today', interventionsChange: '+1 today' },
+                distribution: { users: 156, engagement: 89, alerts: 1, interventions: 0, usersChange: '+7 today', engagementChange: '+2.1%', alertsChange: '0 today', interventionsChange: '0 today' },
+                corporate: { users: 143, engagement: 76, alerts: 2, interventions: 1, usersChange: '+5 today', engagementChange: '+1.5%', alertsChange: '+1 today', interventionsChange: '0 today' },
+                pharmacy: { users: 78, engagement: 84, alerts: 1, interventions: 0, usersChange: '+2 today', engagementChange: '+0.9%', alertsChange: '0 today', interventionsChange: '0 today' },
+                manufacturing: { users: 34, engagement: 41, alerts: 0, interventions: 0, usersChange: '+1 today', engagementChange: '+0.3%', alertsChange: '0 today', interventionsChange: '0 today' }
+            },
+            week: {
+                all: { users: 185623, engagement: 73, alerts: 23, interventions: 12, usersChange: '+2,847 this week', engagementChange: '+2.3%', alertsChange: '+5 this week', interventionsChange: '+3 scheduled' },
+                retail: { users: 1892, engagement: 58, alerts: 18, interventions: 8, usersChange: '+98 this week', engagementChange: '+1.8%', alertsChange: '+4 this week', interventionsChange: '+2 scheduled' },
+                distribution: { users: 456, engagement: 92, alerts: 2, interventions: 1, usersChange: '+23 this week', engagementChange: '+3.2%', alertsChange: '+1 this week', interventionsChange: '+1 scheduled' },
+                corporate: { users: 234, engagement: 79, alerts: 2, interventions: 2, usersChange: '+15 this week', engagementChange: '+2.1%', alertsChange: '0 this week', interventionsChange: '0 scheduled' },
+                pharmacy: { users: 178, engagement: 87, alerts: 1, interventions: 1, usersChange: '+12 this week', engagementChange: '+1.9%', alertsChange: '0 this week', interventionsChange: '0 scheduled' },
+                manufacturing: { users: 87, engagement: 45, alerts: 0, interventions: 0, usersChange: '+8 this week', engagementChange: '+1.2%', alertsChange: '0 this week', interventionsChange: '0 scheduled' }
+            },
+            month: {
+                all: { users: 186789, engagement: 76, alerts: 89, interventions: 34, usersChange: '+12,456 this month', engagementChange: '+4.8%', alertsChange: '+12 this month', interventionsChange: '+8 completed' },
+                retail: { users: 8234, engagement: 63, alerts: 67, interventions: 23, usersChange: '+823 this month', engagementChange: '+3.9%', alertsChange: '+9 this month', interventionsChange: '+6 completed' },
+                distribution: { users: 2045, engagement: 94, alerts: 8, interventions: 4, usersChange: '+189 this month', engagementChange: '+6.2%', alertsChange: '+1 this month', interventionsChange: '+1 completed' },
+                corporate: { users: 1234, engagement: 82, alerts: 9, interventions: 5, usersChange: '+134 this month', engagementChange: '+4.7%', alertsChange: '+1 this month', interventionsChange: '+1 completed' },
+                pharmacy: { users: 678, engagement: 89, alerts: 4, interventions: 2, usersChange: '+67 this month', engagementChange: '+4.1%', alertsChange: '+1 this month', interventionsChange: '0 completed' },
+                manufacturing: { users: 265, engagement: 48, alerts: 1, interventions: 0, usersChange: '+21 this month', engagementChange: '+2.8%', alertsChange: '0 this month', interventionsChange: '0 completed' }
+            },
+            quarter: {
+                all: { users: 189456, engagement: 78, alerts: 234, interventions: 89, usersChange: '+47,832 this quarter', engagementChange: '+6.2%', alertsChange: '+23 this quarter', interventionsChange: '+18 completed' },
+                retail: { users: 32145, engagement: 65, alerts: 189, interventions: 67, usersChange: '+3,789 this quarter', engagementChange: '+5.1%', alertsChange: '+18 this quarter', interventionsChange: '+13 completed' },
+                distribution: { users: 8234, engagement: 96, alerts: 18, interventions: 8, usersChange: '+987 this quarter', engagementChange: '+8.9%', alertsChange: '+2 this quarter', interventionsChange: '+2 completed' },
+                corporate: { users: 4567, engagement: 85, alerts: 19, interventions: 9, usersChange: '+567 this quarter', engagementChange: '+6.8%', alertsChange: '+2 this quarter', interventionsChange: '+2 completed' },
+                pharmacy: { users: 2234, engagement: 91, alerts: 6, interventions: 4, usersChange: '+234 this quarter', engagementChange: '+7.2%', alertsChange: '+1 this quarter', interventionsChange: '+1 completed' },
+                manufacturing: { users: 652, engagement: 51, alerts: 2, interventions: 1, usersChange: '+101 this quarter', engagementChange: '+4.3%', alertsChange: '0 this quarter', interventionsChange: '0 completed' }
+            },
+            year: {
+                all: { users: 195678, engagement: 82, alerts: 1234, interventions: 456, usersChange: '+156,789 this year', engagementChange: '+12.4%', alertsChange: '+89 this year', interventionsChange: '+67 completed' },
+                retail: { users: 98765, engagement: 69, alerts: 923, interventions: 298, usersChange: '+11,567 this year', engagementChange: '+10.2%', alertsChange: '+67 this year', interventionsChange: '+45 completed' },
+                distribution: { users: 28456, engagement: 98, alerts: 156, interventions: 78, usersChange: '+3,456 this year', engagementChange: '+15.8%', alertsChange: '+12 this year', interventionsChange: '+12 completed' },
+                corporate: { users: 18234, engagement: 88, alerts: 98, interventions: 45, usersChange: '+2,123 this year', engagementChange: '+13.1%', alertsChange: '+6 this year', interventionsChange: '+7 completed' },
+                pharmacy: { users: 8234, engagement: 94, alerts: 34, interventions: 23, usersChange: '+876 this year', engagementChange: '+14.3%', alertsChange: '+3 this year', interventionsChange: '+2 completed' },
+                manufacturing: { users: 3100, engagement: 56, alerts: 23, interventions: 12, usersChange: '+212 this year', engagementChange: '+8.7%', alertsChange: '+1 this year', interventionsChange: '+1 completed' }
+            }
+        };
+
+        // Department data that scales with time periods
+        const departmentData = {
+            today: [
+                { name: 'Retail Stores', score: 7.1, fill: 71, trend: '+0.1', category: 'good' },
+                { name: 'Distribution Centers', score: 8.0, fill: 80, trend: '+0.2', category: 'excellent' },
+                { name: 'Corporate Office', score: 6.9, fill: 69, trend: '+0.1', category: 'good' },
+                { name: 'Pharmacy', score: 7.7, fill: 77, trend: '+0.1', category: 'excellent' },
+                { name: 'Manufacturing', score: 6.2, fill: 62, trend: '-0.1', category: 'needs-attention' }
+            ],
+            week: [
+                { name: 'Retail Stores', score: 7.2, fill: 72, trend: '+0.3', category: 'good' },
+                { name: 'Distribution Centers', score: 8.1, fill: 81, trend: '+0.4', category: 'excellent' },
+                { name: 'Corporate Office', score: 6.8, fill: 68, trend: '+0.2', category: 'good' },
+                { name: 'Pharmacy', score: 7.8, fill: 78, trend: '+0.3', category: 'excellent' },
+                { name: 'Manufacturing', score: 6.4, fill: 64, trend: '+0.1', category: 'needs-attention' }
+            ],
+            month: [
+                { name: 'Retail Stores', score: 7.6, fill: 76, trend: '+0.8', category: 'excellent' },
+                { name: 'Distribution Centers', score: 8.3, fill: 83, trend: '+0.9', category: 'excellent' },
+                { name: 'Corporate Office', score: 7.2, fill: 72, trend: '+0.6', category: 'good' },
+                { name: 'Pharmacy', score: 8.1, fill: 81, trend: '+0.7', category: 'excellent' },
+                { name: 'Manufacturing', score: 6.8, fill: 68, trend: '+0.4', category: 'good' }
+            ],
+            quarter: [
+                { name: 'Retail Stores', score: 7.8, fill: 78, trend: '+1.2', category: 'excellent' },
+                { name: 'Distribution Centers', score: 8.5, fill: 85, trend: '+1.4', category: 'excellent' },
+                { name: 'Corporate Office', score: 7.6, fill: 76, trend: '+1.0', category: 'excellent' },
+                { name: 'Pharmacy', score: 8.3, fill: 83, trend: '+1.1', category: 'excellent' },
+                { name: 'Manufacturing', score: 7.2, fill: 72, trend: '+0.8', category: 'good' }
+            ],
+            year: [
+                { name: 'Retail Stores', score: 8.2, fill: 82, trend: '+2.1', category: 'excellent' },
+                { name: 'Distribution Centers', score: 8.7, fill: 87, trend: '+2.3', category: 'excellent' },
+                { name: 'Corporate Office', score: 8.0, fill: 80, trend: '+1.8', category: 'excellent' },
+                { name: 'Pharmacy', score: 8.6, fill: 86, trend: '+2.0', category: 'excellent' },
+                { name: 'Manufacturing', score: 7.8, fill: 78, trend: '+1.6', category: 'excellent' }
+            ]
+        };
+
+        // Activity data that changes with time periods
+        const activityData = {
+            today: [
+                { type: 'alert', icon: '⚠', message: 'High stress detected', detail: 'Employee ID #4521 - Store #245', time: '2 min ago' },
+                { type: 'success', icon: '✓', message: 'Daily wellness check completed', detail: 'Distribution Center - 15 employees', time: '15 min ago' },
+                { type: 'new', icon: '📊', message: 'Morning biometric reading', detail: 'Corporate Office - 8 employees', time: '45 min ago' }
+            ],
+            week: [
+                { type: 'alert', icon: '⚠', message: 'High stress detected', detail: 'Employee ID #4521 - Store #245', time: '2 min ago' },
+                { type: 'new', icon: '📊', message: 'New biometric screening', detail: 'Corporate Office - 15 employees', time: '12 min ago' },
+                { type: 'alert', icon: '⚠', message: 'Absence pattern detected', detail: 'Store #189 - 3 employees', time: '18 min ago' },
+                { type: 'success', icon: '🎯', message: 'Intervention completed', detail: 'Mental health counseling session', time: '25 min ago' }
+            ],
+            month: [
+                { type: 'success', icon: '🎉', message: 'Monthly wellness challenge completed', detail: '186,789 participants - 78% completion rate', time: '1 hour ago' },
+                { type: 'new', icon: '📈', message: 'Wellness program expansion', detail: 'New stress management workshops launched', time: '3 hours ago' },
+                { type: 'alert', icon: '⚠', message: 'Seasonal wellness alert', detail: 'Increased stress levels in retail during holidays', time: '6 hours ago' },
+                { type: 'success', icon: '💪', message: 'Fitness program milestone', detail: '1M+ steps logged company-wide', time: '12 hours ago' },
+                { type: 'new', icon: '🧘', message: 'Mental health initiative launch', detail: 'Mindfulness programs for all departments', time: '1 day ago' }
+            ],
+            quarter: [
+                { type: 'success', icon: '🏆', message: 'Q4 wellness goals exceeded', detail: '189,456 active participants (+23% vs Q3)', time: '2 hours ago' },
+                { type: 'new', icon: '📊', message: 'Quarterly health assessment', detail: 'Company-wide biometric screenings completed', time: '1 day ago' },
+                { type: 'success', icon: '💰', message: 'Healthcare cost reduction achieved', detail: '$3.2M saved through wellness programs', time: '2 days ago' },
+                { type: 'alert', icon: '📈', message: 'Burnout risk trending upward', detail: 'Manufacturing department needs intervention', time: '3 days ago' },
+                { type: 'success', icon: '🎯', message: 'ROI target exceeded', detail: 'Wellness program ROI: 3.8:1 (target: 3:1)', time: '1 week ago' }
+            ],
+            year: [
+                { type: 'success', icon: '🎊', message: '2024 wellness program success', detail: '195K+ participants, 82% engagement rate', time: '1 week ago' },
+                { type: 'new', icon: '🚀', message: 'AI-powered health insights launched', detail: 'Predictive analytics for employee wellness', time: '2 weeks ago' },
+                { type: 'success', icon: '💯', message: 'Annual health goals achieved', detail: '12.4% improvement in overall wellness score', time: '3 weeks ago' },
+                { type: 'alert', icon: '📊', message: 'Year-end wellness trends', detail: 'Comprehensive analysis shows positive trajectory', time: '1 month ago' },
+                { type: 'success', icon: '🌟', message: 'Industry recognition received', detail: 'Best Corporate Wellness Program Award 2024', time: '2 months ago' }
+            ]
+        };
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            updateDashboard();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Remove existing listeners first to prevent duplicates
+            const departmentFilter = document.getElementById('departmentFilter');
+            const timeRange = document.getElementById('timeRange');
+            const riskFilter = document.getElementById('riskFilter');
+            const dataView = document.getElementById('dataView');
+            
+            // Clone and replace elements to remove all existing listeners
+            departmentFilter.replaceWith(departmentFilter.cloneNode(true));
+            timeRange.replaceWith(timeRange.cloneNode(true));
+            riskFilter.replaceWith(riskFilter.cloneNode(true));
+            dataView.replaceWith(dataView.cloneNode(true));
+            
+            // Re-get references after cloning
+            const newDepartmentFilter = document.getElementById('departmentFilter');
+            const newTimeRange = document.getElementById('timeRange');
+            const newRiskFilter = document.getElementById('riskFilter');
+            const newDataView = document.getElementById('dataView');
+            
+            // Add single event listeners
+            newDepartmentFilter.addEventListener('change', function() {
+                if (isUpdating) {
+                    console.log('Update already in progress, skipping...');
+                    return;
+                }
+                console.log('Department changed to:', this.value);
+                updateDashboard();
+            });
+            
+            newTimeRange.addEventListener('change', function() {
+                if (isUpdating) {
+                    console.log('Update already in progress, skipping...');
+                    return;
+                }
+                console.log('Time range changed to:', this.value);
+                updateDashboard();
+            });
+            
+            newRiskFilter.addEventListener('change', function() {
+                if (isUpdating) return;
+                updateDashboard();
+            });
+            
+            newDataView.addEventListener('change', function() {
+                if (isUpdating) return;
+                updateDashboard();
+            });
+
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (isUpdating) return;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    updateDepartmentView(this.dataset.filter);
+                });
+            });
+        }
+
+        function initializeCharts() {
+            // Risk Distribution Chart
+            const riskCtx = document.getElementById('riskDistribution').getContext('2d');
+            riskChart = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                    datasets: [{
+                        data: [56, 28, 16],
+                        backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
+                        borderWidth: 0,
+                        hoverBorderWidth: 3,
+                        hoverBorderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        duration: 1000
+                    }
+                }
+            });
+
+            // Engagement Trends Chart
+            const engagementCtx = document.getElementById('engagementTrends').getContext('2d');
+            engagementChart = new Chart(engagementCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Retail Stores',
+                        data: [68, 72, 75, 73, 78, 65, 62],
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Distribution Centers',
+                        data: [82, 85, 83, 87, 89, 78, 75],
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Corporate Office',
+                        data: [65, 68, 70, 72, 74, 58, 55],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Engagement Rate (%)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+
+        function updateDashboard() {
+            if (isUpdating) {
+                console.log('Update already in progress, aborting...');
+                return;
+            }
+            
+            isUpdating = true;
+            console.log('Starting dashboard update...');
+            
+            showLoading();
+            
+            setTimeout(() => {
+                try {
+                    const timeRange = document.getElementById('timeRange').value;
+                    const department = document.getElementById('departmentFilter').value;
+                    
+                    console.log('Updating dashboard:', timeRange, department);
+                    
+                    updateMetrics(timeRange, department);
+                    updateActivityFeed(timeRange);
+                    updateDepartmentList(timeRange);
+                    updateRecommendations(timeRange);
+                    updateChartData(timeRange);
+                    
+                    hideLoading();
+                    
+                    // Show specific engagement rate in notification
+                    const data = mockData[timeRange] && mockData[timeRange][department] ? 
+                                 mockData[timeRange][department] : 
+                                 mockData.week.all;
+                    const deptName = department === 'all' ? 'All Departments' : 
+                                   department === 'retail' ? 'Retail Stores' :
+                                   department === 'distribution' ? 'Distribution Centers' :
+                                   department === 'corporate' ? 'Corporate Office' :
+                                   department === 'pharmacy' ? 'Pharmacy' :
+                                   department === 'manufacturing' ? 'Manufacturing' : department;
+                                   
+                    showNotification(`${deptName} - ${timeRange}: ${data.engagement}% engagement`);
+                    
+                } catch (error) {
+                    console.error('Error updating dashboard:', error);
+                } finally {
+                    isUpdating = false;
+                    console.log('Dashboard update completed');
+                }
+            }, 800);
+        }
+
+        function updateMetrics(timeRange, department) {
+            const data = mockData[timeRange] && mockData[timeRange][department] ? 
+                         mockData[timeRange][department] : 
+                         mockData.week.all;
+            
+            console.log('Updating metrics with data:', data);
+            
+            // Add updating class to show visual feedback
+            document.getElementById('engagementRate').classList.add('updating');
+            
+            animateValue('activeUsers', data.users);
+            animateValue('engagementRate', data.engagement);
+            animateValue('riskAlerts', data.alerts);
+            animateValue('interventions', data.interventions);
+
+            document.getElementById('usersChange').textContent = data.usersChange;
+            document.getElementById('engagementChange').textContent = data.engagementChange;
+            document.getElementById('alertsChange').textContent = data.alertsChange;
+            document.getElementById('interventionsChange').textContent = data.interventionsChange;
+            
+            // Remove updating class after animation
+            setTimeout(() => {
+                document.getElementById('engagementRate').classList.remove('updating');
+            }, 1000);
+        }
+
+        function updateActivityFeed(timeRange) {
+            const feed = document.getElementById('activityFeed');
+            const activities = activityData[timeRange] || activityData.week;
+            
+            feed.innerHTML = activities.map((activity, index) => `
+                <div class="activity-item" style="animation-delay: ${index * 0.1}s">
+                    <div class="activity-icon activity-${activity.type}">${activity.icon}</div>
+                    <div>
+                        <strong>${activity.message}</strong><br>
+                        ${activity.detail}
+                        <small style="color: #7f8c8d; display: block; margin-top: 3px;">${activity.time}</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateDepartmentList(timeRange) {
+            const list = document.getElementById('departmentList');
+            const departments = departmentData[timeRange] || departmentData.week;
+            
+            list.innerHTML = departments.map(dept => `
+                <div class="department-item" onclick="drillDownDepartment('${dept.name}')">
+                    <div class="department-name">${dept.name}</div>
+                    <div class="department-score">
+                        <span>${dept.score.toFixed(1)}</span>
+                        <div class="score-bar">
+                            <div class="score-fill score-${dept.category}" style="width: ${dept.fill}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateRecommendations(timeRange) {
+            const list = document.getElementById('recommendationsList');
+            const recommendations = {
+                today: [
+                    { priority: 'high', title: 'Address immediate stress alerts', action: 'Contact employees showing high stress indicators' }
+                ],
+                week: [
+                    { priority: 'high', title: 'Manufacturing dept wellness declining', action: 'Schedule stress management workshop this week' }
+                ],
+                month: [
+                    { priority: 'high', title: 'Seasonal wellness patterns detected', action: 'Implement holiday stress prevention programs' },
+                    { priority: 'low', title: 'Preventive care optimization', action: 'Increase biometric screening participation' }
+                ],
+                quarter: [
+                    { priority: 'high', title: 'Q1 wellness strategy planning', action: 'Develop comprehensive wellness roadmap for next quarter' },
+                    { priority: 'low', title: 'Technology integration', action: 'Evaluate AI-powered wellness prediction tools' }
+                ],
+                year: [
+                    { priority: 'high', title: '2025 wellness program strategy', action: 'Plan major initiatives based on 2024 learnings' },
+                    { priority: 'low', title: 'Industry best practices adoption', action: 'Implement cutting-edge wellness technologies' }
+                ]
+            };
+            
+            const recs = recommendations[timeRange] || recommendations.week;
+            
+            list.innerHTML = recs.map(rec => `
+                <div class="recommendation-item priority-${rec.priority}" onclick="implementRecommendation('${rec.title}')">
+                    <strong>${rec.priority.toUpperCase()} PRIORITY</strong><br>
+                    ${rec.title}. ${rec.action}.
+                </div>
+            `).join('');
+        }
+
+        function updateChartData(timeRange) {
+            // Risk distribution varies by time period
+            const riskDistributions = {
+                today: [45, 35, 20],
+                week: [56, 28, 16],
+                month: [62, 25, 13],
+                quarter: [68, 22, 10],
+                year: [75, 18, 7]
+            };
+            
+            const riskData = riskDistributions[timeRange] || riskDistributions.week;
+            riskChart.data.datasets[0].data = riskData;
+            riskChart.update('active');
+            
+            // Engagement trends scale with time period
+            const engagementScales = {
+                today: 0.8,
+                week: 1.0,
+                month: 1.1,
+                quarter: 1.2,
+                year: 1.3
+            };
+            
+            const scale = engagementScales[timeRange] || 1.0;
+            const newData = engagementChart.data.datasets.map(dataset => ({
+                ...dataset,
+                data: dataset.data.map(val => Math.min(100, Math.floor(val * scale)))
+            }));
+            engagementChart.data.datasets = newData;
+            engagementChart.update('active');
+        }
+
+        function updateDepartmentView(filter) {
+            // This could be expanded to filter the department list
+            console.log('Department view filter:', filter);
+        }
+
+        function animateValue(elementId, targetValue) {
+            const element = document.getElementById(elementId);
+            const currentValue = parseInt(element.textContent.replace(/[^0-9]/g, '')) || 0;
+            
+            console.log(`Animating ${elementId}: ${currentValue} → ${targetValue}`);
+            
+            if (currentValue === targetValue) {
+                console.log(`No change needed for ${elementId}`);
+                return; // Don't animate if values are the same
+            }
+            
+            const increment = (targetValue - currentValue) / 25;
+            let current = currentValue;
+
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= targetValue) || (increment < 0 && current <= targetValue)) {
+                    current = targetValue;
+                    clearInterval(timer);
+                    console.log(`Animation completed for ${elementId}: ${targetValue}`);
+                }
+                
+                if (elementId === 'engagementRate') {
+                    element.textContent = Math.floor(current) + '%';
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 40);
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefresh');
+            
+            // Clear any existing interval first
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            
+            isAutoRefresh = !isAutoRefresh;
+            
+            if (isAutoRefresh) {
+                btn.textContent = 'Auto-Refresh: ON';
+                btn.classList.add('active');
+                console.log('Auto-refresh enabled - will update every 30 seconds');
+                autoRefreshInterval = setInterval(() => {
+                    if (!isUpdating) {
+                        console.log('Auto-refresh triggered');
+                        updateDashboard();
+                    } else {
+                        console.log('Auto-refresh skipped - update in progress');
+                    }
+                }, 30000);
+            } else {
+                btn.textContent = 'Auto-Refresh: OFF';
+                btn.classList.remove('active');
+                console.log('Auto-refresh disabled');
+            }
+        }
+
+        function forceRefresh() {
+            console.log('Force refresh clicked');
+            if (!isUpdating) {
+                updateDashboard();
+            } else {
+                console.log('Force refresh skipped - update in progress');
+            }
+        }
+
+        function updateThresholdDisplay(value) {
+            document.getElementById('thresholdDisplay').textContent = `${value} alerts`;
+        }
+
+        function drillDown(metric) {
+            const timeRange = document.getElementById('timeRange').value;
+            const department = document.getElementById('departmentFilter').value;
+            showNotification(`Drilling down into ${metric} for ${department} - ${timeRange}...`);
+        }
+
+        function drillDownDepartment(department) {
+            showNotification(`Loading detailed view for ${department}...`);
+        }
+
+        function implementRecommendation(title) {
+            showNotification(`Implementing: ${title.substring(0, 40)}...`);
+        }
+
+        function showLoading() {
+            for (let i = 1; i <= 9; i++) {
+                const loader = document.getElementById(`loading${i}`);
+                if (loader) loader.classList.add('show');
+            }
+        }
+
+        function hideLoading() {
+            for (let i = 1; i <= 9; i++) {
+                const loader = document.getElementById(`loading${i}`);
+                if (loader) loader.classList.remove('show');
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
+    </script>
+
+</body></html>

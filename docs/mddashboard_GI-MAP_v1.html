@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>MedTrack Pro – GI‑MAP Dashboard (Jane Doe)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: linear-gradient(135deg,#f7f9fb,#eef2f6); color:#2c3e50; margin:0; }
+    .dashboard-container { max-width: 1400px; padding: 20px; margin: 0 auto; }
+
+    /* Header */
+    .header { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 8px 26px rgba(16,24,40,.06); border: 1px solid #eef1f4; margin-bottom: 20px; }
+    .patient-info { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; }
+    .patient-avatar { width:80px; height:80px; border-radius:50%; background: linear-gradient(45deg,#4facfe,#00f2fe); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:28px; }
+    .patient-details h1 { margin:0 0 6px; font-size:28px; font-weight:700; color:#1f2a37; }
+    .patient-meta { display:flex; gap:12px; flex-wrap:wrap; color:#6b7280; font-size:14px; }
+    .alert-badges { display:flex; gap:8px; flex-direction:column; align-items:flex-end; }
+    .alert { padding:8px 12px; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; }
+    .alert-info { background:#e3f2fd; color:#0b78d0; border:1px solid #cfe6fb; }
+
+    /* Layout */
+    .main-grid { display:grid; grid-template-columns: 2.25fr 1fr; gap:20px; }
+    .card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 8px 26px rgba(16,24,40,.06); border:1px solid #eef1f4; }
+
+    /* Tabs */
+    .tabs { display:flex; gap:8px; margin-bottom:16px; background:#f8fafc; padding:8px; border-radius:12px; overflow-x:auto; }
+    .tab { border:2px solid #e5e7eb; background:#fff; color:#1f2a37; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; white-space:nowrap; }
+    .tab.active { background:#0b78d0; border-color:#0b78d0; color:#fff; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+
+    /* Tables */
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:12px; text-align:left; border-bottom:1px solid #edf0f3; font-size:14px; }
+    th { background:#f8fafc; color:#1f2a37; position:sticky; top:0; z-index:1; }
+    .value-normal { color:#16a34a; font-weight:700; }
+    .value-high { color:#dc2626; font-weight:700; }
+    .value-low { color:#d97706; font-weight:700; }
+
+    /* Sections inside Results */
+    .section-title { font-size:20px; font-weight:700; color:#1f2a37; margin:20px 0 10px; display:flex; align-items:center; gap:10px; }
+    .inline-note { font-size:12px; color:#6b7280; margin-top:6px; }
+
+    /* Differential */
+    .diff-table { background:#fff; border-radius:10px; overflow:hidden; border:1px solid #edf0f3; }
+    .diff-head { background:#f8fafc; display:grid; grid-template-columns: 2fr 1fr 2.5fr 2.5fr 1fr; gap:16px; padding:14px; font-weight:700; }
+    .diff-row { display:grid; grid-template-columns: 2fr 1fr 2.5fr 2.5fr 1fr; gap:16px; padding:14px; border-top:1px solid #edf0f3; align-items:center; font-size:13.5px; }
+    .chip { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:800; color:#fff; }
+    .chip-high { background:#dc2626; }
+    .chip-med { background:#d97706; }
+    .chip-low { background:#16a34a; }
+    .differential-link { color:#0b78d0; text-decoration:underline; cursor:pointer; }
+
+    /* Insights */
+    .insight-cards { display:grid; gap:14px; }
+    .insight-card { background:#fff; border:1px solid #edf0f3; border-left-width:6px; border-radius:10px; padding:16px; }
+    .critical { border-left-color:#dc2626; background:linear-gradient(0deg,#fff, #fff 60%, #fff5f5); }
+    .warning { border-left-color:#d97706; background:linear-gradient(0deg,#fff, #fff 60%, #fffaf2); }
+    .info { border-left-color:#0b78d0; background:linear-gradient(0deg,#fff, #fff 60%, #f2f8ff); }
+    .insight-header { font-weight:700; margin-bottom:6px; }
+
+    /* Right nav */
+    #sectionNav { position:sticky; top:20px; height:fit-content; }
+    .nav-group { display:flex; flex-direction:column; gap:6px; }
+    .nav-group-title { font-size:12px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:.4px; padding:0 12px; }
+    .nav-link { display:flex; align-items:center; gap:8px; padding:12px; border-radius:10px; text-decoration:none; color:#1f2a37; border:1px solid #eef1f4; }
+    .nav-link:hover { background:#f6fbff; border-color:#d7eafb; color:#0b78d0; }
+    .nav-link.active { background:#e7f3ff; border-color:#cde5ff; color:#0b78d0; font-weight:800; }
+
+    .disclaimer { margin-top:18px; font-size:12px; color:#6b7280; }
+
+    @media (max-width: 992px){
+      .main-grid { grid-template-columns: 1fr; }
+      .patient-info { grid-template-columns: auto 1fr; }
+      #sectionNav { position:relative; }
+    }
+
+    /* Clear division between results and differential */
+    #results-differential { margin-top: 40px; padding-top: 20px; border-top: 3px solid #d7e3f5; }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="patient-info">
+        <div class="patient-avatar">JD</div>
+        <div class="patient-details">
+          <h1>Jane Doe</h1>
+          <div class="patient-meta">
+            <span>DOB: 02/03/1952</span>
+            <span>•</span>
+            <span>ID: GI-2025-0001</span>
+            <span>•</span>
+            <span>Collected: 06/01/2025</span>
+            <span>•</span>
+            <span>Completed: 06/15/2025</span>
+          </div>
+        </div>
+        <div class="alert-badges">
+          <div class="alert alert-info">GI‑MAP Analysis</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- LEFT: Content -->
+      <div class="card">
+        <div class="tabs">
+          <button class="tab active" data-tab="results">GI‑MAP Results</button>
+          <button class="tab" data-tab="orders">Add'l Lab Tests</button>
+          <button class="tab" data-tab="resources">Additional Resources</button>
+        </div>
+
+        <!-- RESULTS TAB: includes Results → Differential Diagnosis → Insights all on one page -->
+        <section id="results" class="tab-content active">
+          <div class="section-title">GI‑MAP Key Results</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th><th>Analyte</th><th>Result</th><th>Reference</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="background:#f8fafc; font-weight:800;">Bacterial Pathogens</td></tr>
+              <tr><td>C. difficile</td><td>Toxin A</td><td class="value-high">3.47e5</td><td>&lt; 1.00e3</td><td class="value-high">High</td></tr>
+              <tr><td>C. difficile</td><td>Toxin B</td><td class="value-high">2.52e5</td><td>&lt; 1.00e3</td><td class="value-high">High</td></tr>
+              <tr><td>E. coli (STEC)</td><td>stx2</td><td>5.93e2</td><td>&lt; 1.00e3</td><td class="value-normal">Within ref</td></tr>
+
+              <tr><td colspan="5" style="background:#f8fafc; font-weight:800;">Dysbiotic / Overgrowth Bacteria</td></tr>
+              <tr><td>Pseudomonas spp.</td><td>Total</td><td class="value-high">6.08e5</td><td>&lt; 1.00e4</td><td class="value-high">High</td></tr>
+              <tr><td>Pseudomonas aeruginosa</td><td>Species</td><td class="value-high">1.70e3</td><td>&lt; 5.00e2</td><td class="value-high">High</td></tr>
+              <tr><td>Staphylococcus spp.</td><td>Total</td><td class="value-high">1.24e5</td><td>&lt; 1.00e4</td><td class="value-high">High</td></tr>
+              <tr><td>Streptococcus spp.</td><td>Total</td><td class="value-high">1.02e4</td><td>&lt; 1.00e3</td><td class="value-high">High</td></tr>
+
+              <tr><td colspan="5" style="background:#f8fafc; font-weight:800;">Commensal / Keystone Bacteria</td></tr>
+              <tr><td>Akkermansia muciniphila</td><td>—</td><td class="value-low">&lt;dl</td><td>1.0e1 – 8.2e6</td><td class="value-low">Low</td></tr>
+              <tr><td>Faecalibacterium prausnitzii</td><td>—</td><td>1.37e3</td><td>1.0e3 – 5.0e8</td><td class="value-normal">Low‑normal</td></tr>
+              <tr><td>Roseburia spp.</td><td>—</td><td>8.60e8</td><td>5.0e7 – 2.0e10</td><td class="value-normal">Within ref</td></tr>
+
+              <tr><td colspan="5" style="background:#f8fafc; font-weight:800;">Intestinal Health Markers</td></tr>
+              <tr><td>Elastase‑1</td><td>—</td><td class="value-normal">332 µg/g</td><td>&gt; 200</td><td class="value-normal">Normal</td></tr>
+              <tr><td>Calprotectin</td><td>—</td><td class="value-normal">0 µg/g</td><td>&lt; 173</td><td class="value-normal">Normal</td></tr>
+              <tr><td>Secretory IgA</td><td>—</td><td class="value-normal">685 µg/g</td><td>510 – 2010</td><td class="value-normal">Normal</td></tr>
+              <tr><td>Gluten Peptide</td><td>—</td><td class="value-high">129.6 ng/g</td><td>&lt; 5.0</td><td class="value-high">High</td></tr>
+              <tr><td>Zonulin</td><td>—</td><td class="value-high">188.9 ng/g</td><td>&lt; 175</td><td class="value-high">High</td></tr>
+
+              <tr><td colspan="5" style="background:#f8fafc; font-weight:800;">Antibiotic Resistance Gene Signals (Universal)</td></tr>
+              <tr><td>Macrolides</td><td>ermB / mefA / tolc</td><td class="value-high">Positive</td><td>Negative</td><td class="value-high">Detected</td></tr>
+              <tr><td>β‑Lactams</td><td>CTX‑M / TEM</td><td class="value-high">Positive</td><td>Negative</td><td class="value-high">Detected</td></tr>
+              <tr><td>Ciprofloxacin</td><td>pmrA</td><td class="value-high">Positive</td><td>Negative</td><td class="value-high">Detected</td></tr>
+            </tbody>
+          </table>
+          <div class="inline-note">Values transcribed from GI‑MAP sample report. Results reported as genome equivalents/gram (qPCR). “&lt;dl” = below detectable limit.</div>
+
+          <!-- Differential Diagnosis directly below results -->
+          <div id="results-differential" class="section-title">🩺 Differential Diagnosis (Ranked)</div>
+          <div class="diff-table" aria-label="Differential Diagnosis">
+            <div class="diff-head">
+              <div>Condition</div><div>Likelihood</div><div>Why it fits</div><div>Rule‑in / Rule‑out Tests</div><div>Urgency</div>
+            </div>
+            <div class="diff-row">
+              <div><span class="differential-link" data-order="order-cdiff">C. difficile colitis</span></div>
+              <div><span class="chip chip-high">High</span></div>
+              <div>Markedly high C. diff toxin A/B.</div>
+              <div>Stool toxin EIA or PCR; CBC & CRP if systemic; colonoscopy if severe/refractory.</div>
+              <div><span class="chip chip-med">Soon</span></div>
+            </div>
+            <div class="diff-row">
+              <div><span class="differential-link" data-order="order-breath">Post‑antibiotic / infection‑related dysbiosis</span></div>
+              <div><span class="chip chip-high">High</span></div>
+              <div>Opportunist overgrowth with reduced keystone microbes.</div>
+              <div>Repeat stool test post‑intervention; consider SIBO hydrogen/methane breath test.</div>
+              <div><span class="chip chip-low">Routine</span></div>
+            </div>
+            <div class="diff-row">
+              <div><span class="differential-link" data-order="order-lacto">Increased intestinal permeability</span></div>
+              <div><span class="chip chip-med">Moderate</span></div>
+              <div>Elevated zonulin; low <em>Akkermansia</em>.</div>
+              <div>Lactulose/mannitol permeability test; serum zonulin.</div>
+              <div><span class="chip chip-low">Routine</span></div>
+            </div>
+            <div class="diff-row">
+              <div><span class="differential-link" data-order="order-ttg">Gluten sensitivity / Possible celiac disease</span></div>
+              <div><span class="chip chip-med">Moderate</span></div>
+              <div>Positive stool gluten peptide; permeability signal.</div>
+              <div>tTG‑IgA + total IgA; EMA; HLA‑DQ2/DQ8; EGD with biopsy if positive.</div>
+              <div><span class="chip chip-low">Routine</span></div>
+            </div>
+            <div class="diff-row">
+              <div><span class="differential-link" data-order="order-fcal">IBS‑D / Post‑infectious IBS</span></div>
+              <div><span class="chip chip-low">Low</span></div>
+              <div>Dysbiosis pattern; no inflammatory markers.</div>
+              <div>Rome IV criteria; fecal calprotectin/CRP to exclude IBD.</div>
+              <div><span class="chip chip-low">Routine</span></div>
+            </div>
+            <div class="diff-row">
+              <div><span class="differential-link" data-order="order-colo">Subclinical IBD (currently unlikely)</span></div>
+              <div><span class="chip chip-low">Low</span></div>
+              <div>Low calprotectin argues against active IBD now.</div>
+              <div>Repeat calprotectin if flare; colonoscopy for red flags.</div>
+              <div><span class="chip chip-low">Routine</span></div>
+            </div>
+          </div>
+
+          <!-- Insights after differential -->
+          <div id="results-insights" class="section-title">🔎 Insights (GI‑MAP)</div>
+          <div class="insight-cards">
+            <div class="insight-card critical">
+              <div class="insight-header">C. difficile toxins markedly elevated</div>
+              <div>High toxin A/B suggests active or recent <em>C. difficile</em> activity; can cause diarrhea and colitis. Normal calprotectin does not exclude early toxin‑mediated symptoms.</div>
+            </div>
+            <div class="insight-card warning">
+              <div class="insight-header">Dysbiosis with opportunistic overgrowth</div>
+              <div>Overgrowth of <em>Pseudomonas</em>, <em>Staphylococcus</em>, and <em>Streptococcus</em> with low beneficial taxa (<em>Akkermansia</em>, low‑normal <em>F. prausnitzii</em>) suggests barrier stress and post‑antibiotic shift.</div>
+            </div>
+            <div class="insight-card info">
+              <div class="insight-header">Gut permeability signals</div>
+              <div>Elevated zonulin + low <em>Akkermansia</em> may reflect increased intestinal permeability.</div>
+            </div>
+            <div class="insight-card warning">
+              <div class="insight-header">Gluten exposure detected</div>
+              <div>Stool gluten peptide 129.6 ng/g indicates recent gluten ingestion; consider celiac serology if clinically indicated.</div>
+            </div>
+          </div>
+          <div class="disclaimer">Educational summary only—discuss with a licensed clinician for diagnosis and treatment.</div>
+        </section>
+
+        <!-- ORDERS TAB -->
+        <section id="orders" class="tab-content">
+          <div class="section-title">Add'l Lab Tests Indicated (Pacific Medical Laboratory)</div>
+          <table>
+            <thead>
+              <tr><th>Indication</th><th>Test</th><th>Purpose</th><th>Order</th></tr>
+            </thead>
+            <tbody>
+              <tr id="order-cdiff">
+                <td>C. difficile colitis</td>
+                <td>Stool C. difficile Toxin EIA/PCR</td>
+                <td>Confirm active infection</td>
+                <td><a href="https://pacificmedlab.example/order?test=cdiff-toxin" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-cbc">
+                <td>C. difficile severity</td>
+                <td>CBC with Differential</td>
+                <td>Assess leukocytosis, anemia</td>
+                <td><a href="https://pacificmedlab.example/order?test=cbc" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-crp">
+                <td>C. difficile inflammation</td>
+                <td>CRP (C‑Reactive Protein)</td>
+                <td>Systemic inflammatory activity</td>
+                <td><a href="https://pacificmedlab.example/order?test=crp" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-breath">
+                <td>Dysbiosis / SIBO</td>
+                <td>Hydrogen–Methane Breath Test</td>
+                <td>Evaluate SIBO contribution</td>
+                <td><a href="https://pacificmedlab.example/order?test=breath-h2-ch4" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-lacto">
+                <td>Permeability</td>
+                <td>Lactulose/Mannitol Urinary Test</td>
+                <td>Assess intestinal permeability</td>
+                <td><a href="https://pacificmedlab.example/order?test=lactulose-mannitol" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-zonulin">
+                <td>Permeability</td>
+                <td>Serum Zonulin</td>
+                <td>Corroborate stool zonulin signal</td>
+                <td><a href="https://pacificmedlab.example/order?test=serum-zonulin" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-ttg">
+                <td>Gluten sensitivity / Celiac</td>
+                <td>tTG‑IgA + Total IgA</td>
+                <td>First‑line celiac serology</td>
+                <td><a href="https://pacificmedlab.example/order?test=ttg-iga-totaliga" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-ema">
+                <td>Gluten sensitivity / Celiac</td>
+                <td>EMA‑IgA</td>
+                <td>High‑specificity confirmation</td>
+                <td><a href="https://pacificmedlab.example/order?test=ema-iga" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-hla">
+                <td>Celiac predisposition</td>
+                <td>HLA‑DQ2/DQ8 Genotyping</td>
+                <td>Genetic risk assessment</td>
+                <td><a href="https://pacificmedlab.example/order?test=hla-dq2-dq8" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-fcal">
+                <td>Inflammation rule‑out</td>
+                <td>Fecal Calprotectin (repeat if flare)</td>
+                <td>Screen for IBD activity</td>
+                <td><a href="https://pacificmedlab.example/order?test=fecal-calprotectin" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-fit">
+                <td>GI bleeding screen</td>
+                <td>FIT (Fecal Immunochemical Test)</td>
+                <td>Occult blood detection</td>
+                <td><a href="https://pacificmedlab.example/order?test=fit" target="_blank">Order →</a></td>
+              </tr>
+              <tr id="order-gimap">
+                <td>Post‑intervention check</td>
+                <td>GI‑MAP (repeat)</td>
+                <td>Assess response after therapy</td>
+                <td><a href="https://pacificmedlab.example/order?test=gi-map" target="_blank">Order →</a></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="disclaimer">Ordering and interpretation should be coordinated by a licensed clinician.</div>
+        </section>
+
+        <!-- RESOURCES TAB -->
+        <section id="resources" class="tab-content">
+          <div class="section-title">Additional Resources (Authoritative Reading)</div>
+          <ul style="line-height:1.8; font-size:15px; padding-left:18px;">
+            <li><a href="https://www.cdc.gov/cdiff/" target="_blank">CDC – Clostridioides difficile (C. diff)</a></li>
+            <li><a href="https://www.mayoclinic.org/diseases-conditions/c-difficile/symptoms-causes" target="_blank">Mayo Clinic – C. diff: Symptoms & Causes</a></li>
+            <li><a href="https://celiac.org/about-celiac-disease/screening-and-diagnosis/" target="_blank">Celiac Disease Foundation – Screening & Diagnosis</a></li>
+            <li><a href="https://medlineplus.gov/humanmicrobiome.html" target="_blank">MedlinePlus – Human Microbiome</a></li>
+            <li><a href="https://www.niddk.nih.gov/health-information/digestive-diseases/small-intestinal-bacterial-overgrowth" target="_blank">NIDDK – Small Intestinal Bacterial Overgrowth</a></li>
+          </ul>
+          <div class="section-title" style="margin-top:18px;">Questions to Discuss with Your Clinician</div>
+          <ul style="line-height:1.8; font-size:15px; padding-left:18px;">
+            <li>Do my symptoms fit with an active <em>C. diff</em> infection right now, and should we confirm with stool toxin testing?</li>
+            <li>Given the dysbiosis, what is the plan (treat confirmed infection first, then microbiome restoration)?</li>
+            <li>Should I complete celiac serology while still consuming gluten, and for how long before testing?</li>
+            <li>Is a SIBO breath test appropriate now, or after treating any confirmed infection?</li>
+            <li>What dietary steps (prebiotic fiber, resistant starch) could help restore <em>Akkermansia</em> and <em>F. prausnitzii</em>?</li>
+            <li>Which red‑flag symptoms should prompt urgent evaluation (e.g., severe watery/bloody diarrhea, fever, dehydration)?</li>
+          </ul>
+          <div class="disclaimer">This content is educational only and not a substitute for professional medical advice, diagnosis, or treatment.</div>
+        </section>
+      </div>
+
+      <!-- RIGHT: Section Navigation -->
+      <aside id="sectionNav">
+        <div class="card">
+          <div class="nav-group">
+            <div class="nav-group-title">Navigate</div>
+            <a class="nav-link" href="#" data-goto="results"><span>GI‑MAP Results</span></a>
+            <a class="nav-link" href="#" data-goto="results" data-anchor="results-differential"><span>Differential Diagnosis</span></a>
+            <a class="nav-link" href="#" data-goto="results" data-anchor="results-insights"><span>Insights</span></a>
+            <a class="nav-link" href="#" data-goto="orders"><span>Add'l Lab Tests</span></a>
+            <a class="nav-link" href="#" data-goto="resources"><span>Additional Resources</span></a>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="disclaimer">Dx‑Companion: I list possibilities only. This is educational and not medical advice. Consult a licensed clinician.</div>
+  </div>
+
+  <script>
+    // Tabs
+    const tabs = document.querySelectorAll('.tab');
+    const panels = document.querySelectorAll('.tab-content');
+    function activateTab(id, opts = { noScroll: false }){
+      tabs.forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+      panels.forEach(p=>p.classList.toggle('active', p.id===id));
+      if (!opts.noScroll) {
+        requestAnimationFrame(()=>{
+          document.getElementById(id)?.scrollIntoView({behavior:'smooth', block:'start'});
+          syncRightNav();
+        });
+      } else {
+        requestAnimationFrame(syncRightNav);
+      }
+    }
+    tabs.forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.tab)));
+
+    // Right nav
+    const navLinks = document.querySelectorAll('#sectionNav .nav-link');
+    function syncRightNav(){
+      const activeId = document.querySelector('.tab-content.active')?.id;
+      navLinks.forEach(l=>l.classList.toggle('active', l.getAttribute('data-goto')===activeId && !l.getAttribute('data-anchor')));
+    }
+    navLinks.forEach(link=>link.addEventListener('click',(e)=>{
+      e.preventDefault();
+      const goto = link.getAttribute('data-goto')||'results';
+      const anchor = link.getAttribute('data-anchor');
+      activateTab(goto, { noScroll: !!anchor });
+      if(anchor){ setTimeout(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth', block:'start'}), 50); }
+    }));
+
+    // Differential items click → Orders tab (and specific row)
+    document.querySelectorAll('.differential-link').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const rowId = el.getAttribute('data-order');
+        activateTab('orders');
+        if(rowId){ setTimeout(()=>document.getElementById(rowId)?.scrollIntoView({behavior:'smooth', block:'start'}), 150); }
+      });
+    });
+  </script>
+</body>
+</html

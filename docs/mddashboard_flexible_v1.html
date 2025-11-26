@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MedTrack Pro - Medical Document Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f7f4f0 0%, #ececec 100%);
+            min-height: 100vh;
+            color: #333;
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .patient-details h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+
+        .patient-meta {
+            display: flex;
+            gap: 15px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .document-type-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .badge-colonoscopy { background: #e8f5e8; color: #2e7d32; }
+        .badge-lab { background: #e3f2fd; color: #1565c0; }
+        .badge-pathology { background: #fce4ec; color: #c2185b; }
+        .badge-radiology { background: #fff3e0; color: #ef6c00; }
+        .badge-unknown { background: #f5f5f5; color: #616161; }
+
+        .alert-badges {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .alert {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-critical { background: #e74c3c; color: white; }
+        .alert-high { background: #f39c12; color: white; }
+        .alert-medium { background: #ffa726; color: white; }
+        .alert-low { background: #4caf50; color: white; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        /* Document Content Display */
+        .document-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        /* Insights Section Styling */
+        .insights-section {
+            margin-bottom: 30px;
+        }
+
+        .insights-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 20px;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .insight-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .insight-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3498db;
+        }
+
+        .insight-card.critical {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fff 0%, #fdf2f2 100%);
+        }
+
+        .insight-card.warning {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #fff 0%, #fef9f3 100%);
+        }
+
+        .insight-card.info {
+            border-left-color: #3498db;
+            background: linear-gradient(135deg, #fff 0%, #f4f8fb 100%);
+        }
+
+        .insight-card.success {
+            border-left-color: #27ae60;
+            background: linear-gradient(135deg, #fff 0%, #f1f8f4 100%);
+        }
+
+        .insight-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+
+        .insight-content p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+
+        .insight-content strong {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* AI Provider Tags */
+        .ai-provider-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .tag-gpt4o { background: #e8f5e8; color: #2e7d32; }
+        .tag-claude { background: #e3f2fd; color: #1565c0; }
+        .tag-perplexity { background: #fff3e0; color: #ef6c00; }
+
+        /* Enhanced Diagnostic Shortlist Styling */
+        .diagnostic-shortlist {
+            margin: 40px 0;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 15px;
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .diagnostic-shortlist .insights-title {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            margin: 0;
+            padding: 20px 25px;
+            border-radius: 15px 15px 0 0;
+            border-bottom: none;
+        }
+
+        .diagnostic-shortlist .insight-cards {
+            padding: 25px;
+        }
+
+        /* Right Sidebar Styling */
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .vital-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(79, 172, 254, 0.3);
+        }
+
+        .vital-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .vital-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Processing Status */
+        .processing-status {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .status-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .status-complete { color: #27ae60; }
+        .status-processing { color: #f39c12; }
+        .status-pending { color: #7f8c8d; }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-container {
+                padding: 15px;
+            }
+            
+            .patient-info {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .alert-badges {
+                align-items: center;
+            }
+        }
+
+        /* Document Type Specific Styling */
+        .colonoscopy-specific {
+            border-left-color: #2e7d32;
+        }
+
+        .lab-specific {
+            border-left-color: #1565c0;
+        }
+
+        .pathology-specific {
+            border-left-color: #c2185b;
+        }
+
+        .radiology-specific {
+            border-left-color: #ef6c00;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="patient-info">
+                <div class="patient-avatar">SM</div>
+                <div class="patient-details">
+                    <div class="document-type-badge badge-colonoscopy" id="documentTypeBadge">
+                        Colonoscopy Report
+                    </div>
+                    <h1>Sarah Mitchell</h1>
+                    <div class="patient-meta">
+                        <span>DOB: March 15, 1985 (39 years)</span>
+                        <span>•</span>
+                        <span>ID: PM-2024-7891</span>
+                        <span>•</span>
+                        <span>Report Date: <span id="reportDate">July 28, 2025</span></span>
+                    </div>
+                </div>
+                <div class="alert-badges">
+                    <div class="alert alert-medium" id="urgencyBadge">Follow-up Required</div>
+                    <div class="alert alert-low">Analysis Complete</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Left Column -->
+            <div class="card">
+                <!-- Document Preview -->
+                <div class="card-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                    </svg>
+                    <span id="documentTitle">Medical Document Analysis</span>
+                </div>
+
+                <div class="document-preview" id="documentPreview">
+                    Loading document content...
+                </div>
+
+                <!-- Processing Status -->
+                <div class="processing-status">
+                    <h4 style="margin-bottom: 10px; color: #2c3e50;">Analysis Status</h4>
+                    <div class="status-item">
+                        <svg class="status-icon status-complete" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"/>
+                        </svg>
+                        <span>Document Processing: Complete</span>
+                    </div>
+                    <div class="status-item">
+                        <svg class="status-icon status-complete" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"/>
+                        </svg>
+                        <span>Medical Analysis: Complete</span>
+                    </div>
+                    <div class="status-item">
+                        <svg class="status-icon status-complete" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"/>
+                        </svg>
+                        <span>Report Generation: Complete</span>
+                    </div>
+                </div>
+
+                <!-- Colonoscopy Analysis Content -->
+                <div id="dynamicContent">
+                    <!-- Frame Analysis Table -->
+                    <div class="insights-section">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,5V19H5V5H19Z"/>
+                            </svg>
+                            FRAME ANALYSIS
+                        </h3>
+                        <div class="medical-table">
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                                <thead>
+                                    <tr style="background: #f8f9fa; border-bottom: 2px solid #3498db;">
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Frame</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Possible Finding</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Why It Looks That Way</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Typical Next Step</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">A & B</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Fairly normal-looking colon wall (smooth, light pink) with healthy folds.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">No obvious ulceration or mass.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Routine inspection; sometimes biopsies are still taken if there's a history of inflammatory bowel disease.</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">C & D</td>
+                                        <td style="padding: 12px; color: #2c3e50;">A single, bulging, red-pink growth with a smooth surface; one image shows a small bleeding point after it was likely sampled.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">This fits the appearance of a colon polyp—often adenomatous (pre-cancerous) but sometimes hyperplastic (usually benign) or inflammatory.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Polypectomy (snaring or cautery removal) followed by pathology to find out exactly what type of polyp it is.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Differential Diagnosis -->
+                    <div class="insights-section diagnostic-shortlist">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8L6,7M4,19H8L6,17M4,14H8L6,12"/>
+                            </svg>
+                            COMMON CONDITIONS THAT MATCH A SOLITARY COLON LESION
+                        </h3>
+                        <div class="medical-table">
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                                <thead>
+                                    <tr style="background: #f8f9fa; border-bottom: 2px solid #3498db;">
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Rank</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Condition (not a diagnosis)</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Key Matching Features</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">"Rule-in / Rule-out" Tests</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #2c3e50;">Urgency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">1</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Adenomatous polyp (tubular, tubulovillous, villous)</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Smooth or lobulated bump, may bleed when biopsied.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Histology after removal tells whether there's dysplasia (precancer).</td>
+                                        <td style="padding: 12px; color: #27ae60; font-weight: 600;">🟢 routine follow-up after removal</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">2</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Hyperplastic polyp</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Looks similar but usually <1 cm and often on the left side.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Path report confirms lack of dysplasia.</td>
+                                        <td style="padding: 12px; color: #27ae60; font-weight: 600;">🟢 routine</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">3</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Sessile serrated lesion</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Flatter, mucus-covered, often in right colon. Harder to spot on photos alone.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Pathology; sometimes "chromoscopy" dye is used during the procedure.</td>
+                                        <td style="padding: 12px; color: #f39c12; font-weight: 600;">🟡 sooner repeat scope if incompletely removed</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">4</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Inflammatory pseudopolyp (in colitis)</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Irregular but occurs amid patchy inflammation.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Clinical history of ulcerative colitis/Crohn's; biopsies elsewhere show chronic inflammation.</td>
+                                        <td style="padding: 12px; color: #f39c12; font-weight: 600;">🟡 depends on underlying disease</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                                        <td style="padding: 12px; font-weight: 600; color: #2c3e50;">5</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Early colorectal cancer</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Larger, ulcerated, firmer mass; may bleed.</td>
+                                        <td style="padding: 12px; color: #2c3e50;">Biopsy showing malignant cells; CT for staging.</td>
+                                        <td style="padding: 12px; color: #e74c3c; font-weight: 600;">🔴 urgent specialist care</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 12px; color: #7f8c8d;">
+                                <strong>Legend:</strong> 🟢 routine = discuss at next regular visit; 🟡 soon = schedule within weeks; 🔴 urgent = same day / ER if severe bleeding, obstruction, or alarming pathology
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clarifying Questions -->
+                    <div class="insights-section">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M10,19H13V22H10V19M12,2C17.35,2.22 19.68,7.62 16.5,11.67C15.67,12.67 14.33,13.33 13.67,14.17C13,15 13,16 13,17H10C10,15.33 10,13.92 10.67,12.92C11.33,11.92 12.67,11.33 13.5,10.67C15.92,8.43 15.32,5.26 12,5A3,3 0 0,0 9,8H6A6,6 0 0,1 12,2Z"/>
+                            </svg>
+                            CLARIFYING QUESTIONS TO REFINE THE PICTURE
+                        </h3>
+                        <div class="insight-cards">
+                            <div class="insight-card info">
+                                <div class="insight-header">📋 Clinical History</div>
+                                <div class="insight-content">
+                                    <p><strong>Reason for the colonoscopy</strong> – routine screening, bleeding, anemia, family history?</p>
+                                    <p><strong>Size & number of polyps</strong> – did the endoscopist mention more than one lesion or give a size estimate?</p>
+                                    <p><strong>Biopsy or removal done?</strong> – any preliminary pathology results?</p>
+                                </div>
+                            </div>
+                            <div class="insight-card warning">
+                                <div class="insight-header">⚠️ Symptoms Assessment</div>
+                                <div class="insight-content">
+                                    <p><strong>Symptoms</strong> – rectal bleeding, change in bowel habits, weight loss, abdominal pain?</p>
+                                    <p><strong>Personal/family history</strong> – prior polyps, colorectal cancer, inflammatory bowel disease, or genetic syndromes?</p>
+                                </div>
+                            </div>
+                            <div class="insight-card success">
+                                <div class="insight-header">🔍 Why These Questions Matter</div>
+                                <div class="insight-content">
+                                    <p>Your answers can move a condition up or down the list. For example:</p>
+                                    <p><strong>Bleeding + weight loss</strong> → raises concern for malignancy.</p>
+                                    <p><strong>Multiple small lesions in a background of colitis</strong> → favors inflammatory pseudopolyps.</p>
+                                    <p><strong>Normal pathology</strong> → shifts focus to surveillance timing rather than treatment.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Next Steps -->
+                    <div class="insights-section">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z"/>
+                            </svg>
+                            TYPICAL NEXT STEPS AFTER A POLYP IS FOUND
+                        </h3>
+                        <div class="insight-cards">
+                            <div class="insight-card info">
+                                <div class="insight-header">🏥 Immediate Actions</div>
+                                <div class="insight-content">
+                                    <p><strong>Complete removal</strong> during the same colonoscopy if safe.</p>
+                                    <p><strong>Pathology report</strong> within a week or two—tells type, size, grade of dysplasia.</p>
+                                </div>
+                            </div>
+                            <div class="insight-card success">
+                                <div class="insight-header">📅 Follow-up Care</div>
+                                <div class="insight-content">
+                                    <p><strong>Surveillance schedule</strong> based on findings (e.g., repeat colonoscopy in 3, 5, or 10 years).</p>
+                                    <p><strong>Lifestyle & risk reduction:</strong> stop smoking, maintain healthy weight, limit red/processed meat, ensure adequate fiber and calcium.</p>
+                                </div>
+                            </div>
+                            <div class="insight-card critical">
+                                <div class="insight-header">🚨 If Cancer is Discovered</div>
+                                <div class="insight-content">
+                                    <p><strong>Referral to colorectal surgeon and oncologist</strong> for staging and management.</p>
+                                    <p><strong>Additional imaging</strong> (CT, MRI) may be needed for staging.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resources -->
+                    <div class="insights-section">
+                        <h3 class="insights-title">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,5V19H5V5H19Z"/>
+                            </svg>
+                            AUTHORITATIVE RESOURCES FOR DEEPER READING
+                        </h3>
+                        <div class="insight-cards">
+                            <div class="insight-card info">
+                                <div class="insight-content">
+                                    <p><strong>Mayo Clinic:</strong> "Colon polyps" – causes, removal, follow-up.</p>
+                                    <p><strong>MedlinePlus:</strong> "Screening for colorectal cancer."</p>
+                                    <p><strong>American Cancer Society:</strong> "What the pathology report tells you."</p>
+                                    <p style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 6px; font-size: 12px;">
+                                        <strong>Important:</strong> This information is for education only—please review your images and pathology report with your gastroenterologist or another licensed clinician for an accurate diagnosis and personalized care plan.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-sidebar">
+                <!-- Document Info -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2Z"/>
+                        </svg>
+                        Document Information
+                    </div>
+                    <div id="documentInfo">
+                        <div style="margin-bottom: 10px;">
+                            <strong>Type:</strong> <span id="docType">Colonoscopy</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Facility:</strong> <span id="facility">Metro Endoscopy Center</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>File Size:</strong> <span id="fileSize">2.4 MB</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Processing Time:</strong> <span id="processingTime">45 seconds</span>
+                        </div>
+                        <div>
+                            <strong>Confidence:</strong> <span id="confidence">87%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Summary -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,17A1.5,1.5 0 0,0 10.5,15.5A1.5,1.5 0 0,0 12,14A1.5,1.5 0 0,0 13.5,15.5A1.5,1.5 0 0,0 12,17M12,4A6,6 0 0,0 6,10C6,10 6,10.5 6.5,11H9V12.5H8.5C8,12.5 7.5,12.85 7.5,13.5V16H10.5V13.5H11.5V16H16.5V13.5C16.5,12.85 16,12.5 15.5,12.5H15V11H17.5C18,10.5 18,10 18,10A6,6 0 0,0 12,4Z"/>
+                        </svg>
+                        Analysis Summary
+                    </div>
+                    <div id="aiSummary">
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                            <strong>Most Likely:</strong> Adenomatous polyp requiring removal and pathology
+                        </div>
+                        <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                            <strong>Urgency:</strong> Routine follow-up after polypectomy
+                        </div>
+                        <div style="background: #d1ecf1; padding: 10px; border-radius: 6px;">
+                            <strong>Next Step:</strong> Await pathology results and schedule surveillance colonoscopy
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+                        </svg>
+                        Quick Actions
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button style="padding: 8px 12px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                            Export Report
+                        </button>
+                        <button style="padding: 8px 12px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                            Schedule Follow-up
+                        </button>
+                        <button style="padding: 8px 12px; background: #f39c12; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                            Add to Patient Record
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Document type configuration
+        const documentTypes = {
+            colonoscopy: {
+                badge: 'badge-colonoscopy',
+                title: 'Colonoscopy Report Analysis',
+                icon: '🔍',
+                sections: ['findings', 'polyps', 'recommendations', 'surveillance']
+            },
+            lab: {
+                badge: 'badge-lab',
+                title: 'Laboratory Report Analysis',
+                icon: '🧪',
+                sections: ['values', 'abnormal', 'trends', 'recommendations']
+            },
+            pathology: {
+                badge: 'badge-pathology',
+                title: 'Pathology Report Analysis',
+                icon: '🔬',
+                sections: ['diagnosis', 'staging', 'margins', 'recommendations']
+            },
+            radiology: {
+                badge: 'badge-radiology',
+                title: 'Radiology Report Analysis',
+                icon: '📷',
+                sections: ['findings', 'impressions', 'comparison', 'recommendations']
+            }
+        };
+
+        // Initialize dashboard based on document type
+        function initializeDashboard(documentType = 'colonoscopy', analysisData = null) {
+            const config = documentTypes[documentType];
+            
+            // Update header
+            document.getElementById('documentTypeBadge').textContent = config.title;
+            document.getElementById('documentTypeBadge').className = `document-type-badge ${config.badge}`;
+            document.getElementById('documentTitle').textContent = `${config.icon} ${config.title}`;
+            
+            // Load document-specific content
+            loadDocumentContent(documentType, analysisData);
+        }
+
+        function loadDocumentContent(documentType, analysisData) {
+            const container = document.getElementById('dynamicContent');
+            
+            // This would be populated with actual analysis data
+            // For now, showing template structure
+            container.innerHTML = generateContentTemplate(documentType);
+        }
+
+        function generateContentTemplate(documentType) {
+            // This would generate content based on the multi-AI analysis results
+            // Template structure that adapts to document type
+            return `
+                <div class="insights-section diagnostic-shortlist">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8L6,7M4,19H8L6,17M4,14H8L6,12"/>
+                        </svg>
+                        DIAGNOSTIC SHORTLIST
+                    </h3>
+                    <div class="insight-cards">
+                        <div class="insight-card info">
+                            <div class="ai-provider-tag tag-gpt4o">Primary Analysis</div>
+                            <div class="insight-header">📋 Key Findings</div>
+                            <div class="insight-content">
+                                <p>Analysis results will be populated here based on the multi-AI processing pipeline.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize with default document type
+        initializeDashboard('colonoscopy');
+
+        // Function to update dashboard with real analysis data
+        function updateWithAnalysisResults(analysisResults) {
+            // This would be called when the multi-AI analysis completes
+            console.log('Analysis results received:', analysisResults);
+            
+            // Update processing status
+            // Update content sections
+            // Update confidence scores
+            // Update urgency levels
+        }
+    </script>
+</body>
+</html>

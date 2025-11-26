@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MedTrack Pro - Lab Report Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Prevent text selection only where needed */
+        .tab, .vital-card {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Allow text selection for content areas */
+        .lab-results-table, .insight-content, .treatment-recommendations, p {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f7f4f0 0%, #ececec 100%);
+            min-height: 100vh;
+            color: #333;
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .patient-details h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+
+        .patient-meta {
+            display: flex;
+            gap: 15px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .alert-badges {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .alert {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-critical { background: #e74c3c; color: white; }
+        .alert-high { background: #f39c12; color: white; }
+        .alert-medium { background: #ffa726; color: white; }
+        .alert-info { background: #42a5f5; color: white; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        /* Lab Results Table Styling */
+        .lab-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .lab-results-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .lab-results-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+        }
+
+        .lab-results-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .test-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .test-value {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .normal { color: #27ae60; }
+        .abnormal-high { color: #e74c3c; }
+        .abnormal-low { color: #f39c12; }
+        .critical { color: #c0392b; background-color: #fdf2f2; }
+
+        .flag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .flag-high { background: #e74c3c; color: white; }
+        .flag-low { background: #f39c12; color: white; }
+        .flag-critical { background: #c0392b; color: white; }
+
+        /* Insights Section Styling */
+        .insights-section {
+            margin-bottom: 30px;
+        }
+
+        .insights-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 20px;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .insight-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .insight-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3498db;
+        }
+
+        .insight-card.critical {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fff 0%, #fdf2f2 100%);
+        }
+
+        .insight-card.warning {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #fff 0%, #fef9f3 100%);
+        }
+
+        .insight-card.info {
+            border-left-color: #3498db;
+            background: linear-gradient(135deg, #fff 0%, #f4f8fb 100%);
+        }
+
+        .insight-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+
+        .insight-content p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+
+        .insight-content strong {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* Enhanced Diagnostic Shortlist Styling */
+        .diagnostic-shortlist {
+            margin: 40px 0;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 15px;
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .diagnostic-shortlist .insights-title {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            margin: 0;
+            padding: 20px 25px;
+            border-radius: 15px 15px 0 0;
+            border-bottom: none;
+        }
+
+        .diagnostic-shortlist .insight-cards {
+            padding: 25px;
+        }
+
+        /* Right Sidebar Styling */
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .vital-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(79, 172, 254, 0.3);
+        }
+
+        .vital-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .vital-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Navigation Styling */
+        .section-nav {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #7f8c8d;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .nav-link.active {
+            background: #3498db;
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-container {
+                padding: 15px;
+            }
+            
+            .patient-info {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .alert-badges {
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="patient-info">
+                <div class="patient-avatar">SM</div>
+                <div class="patient-details">
+                    <h1>Sarah Mitchell</h1>
+                    <div class="patient-meta">
+                        <span>DOB: March 15, 1985 (39 years)</span>
+                        <span>•</span>
+                        <span>ID: PM-2024-7891</span>
+                        <span>•</span>
+                        <span>Lab Date: July 28, 2025</span>
+                    </div>
+                </div>
+                <div class="alert-badges">
+                    <div class="alert alert-critical">Critical Values</div>
+                    <div class="alert alert-high">Follow-up Required</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Left Column -->
+            <div class="card">
+                <!-- Lab Report Header -->
+                <div class="card-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3"/>
+                    </svg>
+                    July 28, 2025 Lab Results - Comprehensive Metabolic Panel (CMP)
+                </div>
+
+                <!-- Lab Results Table -->
+                <table class="lab-results-table">
+                    <thead>
+                        <tr>
+                            <th>Test Name</th>
+                            <th>Result</th>
+                            <th>Reference Range</th>
+                            <th>Units</th>
+                            <th>Flag</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="test-name">Hemoglobin</td>
+                            <td class="test-value abnormal-low">10.8</td>
+                            <td>12.0-15.5</td>
+                            <td>g/dL</td>
+                            <td><span class="flag flag-low">Low</span></td>
+                        </tr>
+                        <tr>
+                            <td class="test-name">Hematocrit</td>
+                            <td class="test-value abnormal-low">32.1</td>
+                            <td>36.0-46.0</td>
+                            <td>%</td>
+                            <td><span class="flag flag-low">Low</span></td>
+                        </tr>
+                        <tr>
+                            <td class="test-name">Iron</td>
+                            <td class="test-value abnormal-low">45</td>
+                            <td>60-170</td>
+                            <td>μg/dL</td>
+                            <td><span class="flag flag-low">Low</span></td>
+                        </tr>
+                        <tr class="critical">
+                            <td class="test-name">Ferritin</td>
+                            <td class="test-value">8</td>
+                            <td>15-150</td>
+                            <td>ng/mL</td>
+                            <td><span class="flag flag-critical">Critical</span></td>
+                        </tr>
+                        <tr>
+                            <td class="test-name">Glucose</td>
+                            <td class="test-value normal">92</td>
+                            <td>70-100</td>
+                            <td>mg/dL</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td class="test-name">Creatinine</td>
+                            <td class="test-value normal">0.9</td>
+                            <td>0.6-1.2</td>
+                            <td>mg/dL</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Diagnostic Shortlist Section -->
+                <div class="insights-section diagnostic-shortlist">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8L6,7M4,19H8L6,17M4,14H8L6,12"/>
+                        </svg>
+                        DIAGNOSTIC SHORTLIST
+                    </h3>
+
+                    <div class="insight-cards">
+                        <div class="insight-card critical">
+                            <div class="insight-header">🩸 Iron Deficiency Anemia - CONFIRMED</div>
+                            <div class="insight-content">
+                                <p><strong>Primary Evidence:</strong> Critically low ferritin (8 ng/mL), low hemoglobin (10.8 g/dL), low hematocrit (32.1%), low serum iron (45 μg/dL)</p>
+                                <p><strong>Severity:</strong> Moderate to severe iron deficiency with established anemia</p>
+                                <p><strong>Immediate Action:</strong> Iron supplementation and investigation of underlying cause required</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card warning">
+                            <div class="insight-header">🔍 Underlying Cause Investigation Needed</div>
+                            <div class="insight-content">
+                                <p><strong>Potential Sources:</strong> GI bleeding (most common), menstrual losses, dietary deficiency, malabsorption</p>
+                                <p><strong>Red Flags:</strong> Critically low ferritin suggests chronic blood loss rather than dietary deficiency alone</p>
+                                <p><strong>Next Steps:</strong> Colonoscopy, upper endoscopy, and gynecologic evaluation as indicated</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clinical Questions Section -->
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M15.07,11.25L14.17,12.17C13.45,12.89 13,13.5 13,15H11V14.5C11,13.39 11.45,12.39 12.17,11.67L13.41,10.41C13.78,10.05 14,9.55 14,9C14,7.89 13.1,7 12,7A2,2 0 0,0 10,9H8A4,4 0 0,1 12,5A4,4 0 0,1 16,9C16,10.27 15.45,11.4 14.59,12.26L15.07,11.25M11,19V17H13V19H11Z"/>
+                        </svg>
+                        CLINICAL QUESTIONS
+                    </h3>
+
+                    <div class="insight-cards">
+                        <div class="insight-card info">
+                            <div class="insight-header">📋 Patient History Needed</div>
+                            <div class="insight-content">
+                                <p><strong>Symptom Assessment:</strong> Fatigue, weakness, shortness of breath, palpitations, restless leg syndrome?</p>
+                                <p><strong>Bleeding History:</strong> Heavy menstrual periods, GI symptoms (dark stools, blood in stool), recent procedures?</p>
+                                <p><strong>Dietary Factors:</strong> Vegetarian/vegan diet, recent weight loss, eating disorders?</p>
+                                <p><strong>Medications:</strong> NSAIDs, anticoagulants, proton pump inhibitors, recent antibiotics?</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card warning">
+                            <div class="insight-header">🧪 Additional Tests Recommended</div>
+                            <div class="insight-content">
+                                <p><strong>Immediate (within 1 week):</strong></p>
+                                <p>• Complete Blood Count with differential and reticulocyte count</p>
+                                <p>• Iron studies: TIBC, transferrin saturation, soluble transferrin receptor</p>
+                                <p>• Stool occult blood test (3 samples)</p>
+                                <p><strong>If bleeding suspected (within 2-4 weeks):</strong></p>
+                                <p>• Colonoscopy and upper endoscopy</p>
+                                <p>• Gynecologic evaluation if premenopausal female</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lab Insights Analysis -->
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,17A1.5,1.5 0 0,0 10.5,15.5A1.5,1.5 0 0,0 12,14A1.5,1.5 0 0,0 13.5,15.5A1.5,1.5 0 0,0 12,17M12,4A6,6 0 0,0 6,10C6,10 6,10.5 6.5,11H9V12.5H8.5C8,12.5 7.5,12.85 7.5,13.5V16H10.5V13.5H11.5V16H16.5V13.5C16.5,12.85 16,12.5 15.5,12.5H15V11H17.5C18,10.5 18,10 18,10A6,6 0 0,0 12,4Z"/>
+                        </svg>
+                        LAB INSIGHTS ANALYSIS
+                    </h3>
+
+                    <div class="insight-cards">
+                        <div class="insight-card critical">
+                            <div class="insight-header">⚠️ Critical Finding: Severe Iron Depletion</div>
+                            <div class="insight-content">
+                                <p><strong>Ferritin Level:</strong> 8 ng/mL (critically low) indicates severely depleted iron stores</p>
+                                <p><strong>Clinical Significance:</strong> This level suggests chronic iron loss over months to years</p>
+                                <p><strong>Urgency:</strong> Requires immediate investigation for source of blood loss</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card info">
+                            <div class="insight-header">📊 Additional Data Would Enhance Analysis</div>
+                            <div class="insight-content">
+                                <p><strong>Symptom Tracking:</strong> Would help correlate fatigue patterns with iron levels and treatment response</p>
+                                <p><strong>Wearables Data:</strong> Heart rate variability and activity levels could indicate cardiovascular compensation</p>
+                                <p><strong>Trend Analysis:</strong> Previous lab values would show progression rate and treatment effectiveness</p>
+                                <p><strong>Current Limitation:</strong> Single time-point analysis limits assessment of disease progression</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card info">
+                            <div class="insight-header">✅ Reassuring Findings</div>
+                            <div class="insight-content">
+                                <p><strong>Kidney Function:</strong> Normal creatinine (0.9 mg/dL) rules out renal contribution</p>
+                                <p><strong>Glucose Control:</strong> Normal glucose (92 mg/dL) indicates good metabolic status</p>
+                                <p><strong>No Evidence:</strong> No signs of hemolysis or other blood disorders from available data</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dietary Recommendations Section -->
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"/>
+                        </svg>
+                        DIETARY RECOMMENDATIONS
+                    </h3>
+
+                    <div class="insight-cards">
+                        <div class="insight-card warning">
+                            <div class="insight-header">🥩 Iron-Rich Foods Priority</div>
+                            <div class="insight-content">
+                                <p><strong>Heme Iron Sources (best absorbed):</strong> Red meat, poultry, fish, organ meats</p>
+                                <p><strong>Non-Heme Iron Sources:</strong> Spinach, lentils, fortified cereals, tofu, quinoa</p>
+                                <p><strong>Absorption Enhancers:</strong> Vitamin C (citrus, tomatoes, bell peppers) with iron-rich meals</p>
+                                <p><strong>Evidence:</strong> Critically low ferritin (8 ng/mL) requires both supplementation AND dietary optimization</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card info">
+                            <div class="insight-header">⚠️ Foods to Limit During Treatment</div>
+                            <div class="insight-content">
+                                <p><strong>Iron Absorption Inhibitors:</strong></p>
+                                <p>• Calcium-rich foods/supplements with iron-rich meals</p>
+                                <p>• Coffee and tea within 1 hour of iron supplementation</p>
+                                <p>• High-fiber foods with iron supplements (separate by 2 hours)</p>
+                                <p><strong>Rationale:</strong> Low iron (45 μg/dL) and low ferritin require maximized absorption efficiency</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card info">
+                            <div class="insight-header">💊 Supplementation Guidance</div>
+                            <div class="insight-content">
+                                <p><strong>Timing:</strong> Iron supplements on empty stomach (if tolerated) or with vitamin C</p>
+                                <p><strong>Monitoring:</strong> Recheck labs in 4-6 weeks to assess response</p>
+                                <p><strong>Expected Response:</strong> Hemoglobin should increase 1-2 g/dL per month with adequate treatment</p>
+                                <p><strong>Duration:</strong> Continue 3-6 months after normalization to replenish stores</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Timeline Section -->
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"/>
+                        </svg>
+                        FOLLOW-UP TIMELINE
+                    </h3>
+
+                    <div class="insight-cards">
+                        <div class="insight-card critical">
+                            <div class="insight-header">🚨 Immediate Actions (Within 1 Week)</div>
+                            <div class="insight-content">
+                                <p>• Start iron supplementation (ferrous sulfate 325mg daily)</p>
+                                <p>• Order additional iron studies and CBC with differential</p>
+                                <p>• Stool occult blood testing</p>
+                                <p>• Schedule GI consultation for endoscopic evaluation</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card warning">
+                            <div class="insight-header">📅 Short-term Follow-up (2-6 Weeks)</div>
+                            <div class="insight-content">
+                                <p>• Recheck CBC and iron studies at 4-6 weeks</p>
+                                <p>• Colonoscopy and upper endoscopy if bleeding suspected</p>
+                                <p>• Gynecologic evaluation if premenopausal female</p>
+                                <p>• Assess treatment tolerance and adherence</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card info">
+                            <div class="insight-header">📈 Long-term Monitoring (3-12 Months)</div>
+                            <div class="insight-content">
+                                <p>• Monthly CBC until hemoglobin normalizes</p>
+                                <p>• Ferritin recheck at 3 months (target >30 ng/mL)</p>
+                                <p>• Continue iron supplementation 3-6 months after normalization</p>
+                                <p>• Annual screening if no source identified</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-sidebar">
+                <!-- Recent Vitals -->
+                <div class="vitals-grid">
+                    <div class="vital-card">
+                        <div class="vital-value">118/75</div>
+                        <div class="vital-label">BP (mmHg)</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">72</div>
+                        <div class="vital-label">Heart Rate</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">98.6°F</div>
+                        <div class="vital-label">Temperature</div>
+                    </div>
+                    <div class="vital-card">
+                        <div class="vital-value">98%</div>
+                        <div class="vital-label">O2 Sat</div>
+                    </div>
+                </div>
+
+                <!-- Current Medications -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M6,3H18V5H6V3M3,7A2,2 0 0,1 5,5H19A2,2 0 0,1 21,7V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V7M5,7V19H19V7H5M7,9H17V11H7V9M7,13H17V15H7V13Z"/>
+                        </svg>
+                        Current Medications
+                    </div>
+                    <div class="medication-list">
+                        <div class="medication-item">
+                            <div class="med-name">Lisinopril 10mg</div>
+                            <div class="med-frequency">Daily</div>
+                        </div>
+                        <div class="medication-item">
+                            <div class="med-name">Metformin 500mg</div>
+                            <div class="med-frequency">Twice daily</div>
+                        </div>
+                        <div class="medication-item">
+                            <div class="med-name">Multivitamin</div>
+                            <div class="med-frequency">Daily</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Navigation -->
+                <div class="section-nav">
+                    <div class="nav-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z"/>
+                        </svg>
+                        Section Navigation
+                    </div>
+                    <div class="nav-links">
+                        <a href="#lab-results" class="nav-link active">
+                            <span>🧪</span>
+                            <span>Lab Results</span>
+                        </a>
+                        <a href="#diagnostic-shortlist" class="nav-link">
+                            <span>🩺</span>
+                            <span>Diagnostic Shortlist</span>
+                        </a>
+                        <a href="#clinical-questions" class="nav-link">
+                            <span>❓</span>
+                            <span>Clinical Questions</span>
+                        </a>
+                        <a href="#lab-insights" class="nav-link">
+                            <span>🔍</span>
+                            <span>Lab Insights</span>
+                        </a>
+                        <a href="#dietary-recommendations" class="nav-link">
+                            <span>🥗</span>
+                            <span>Dietary Recommendations</span>
+                        </a>
+                        <a href="#follow-up-timeline" class="nav-link">
+                            <span>📅</span>
+                            <span>Follow-up Timeline</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Provider Notes Section -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Provider Notes
+                    </div>
+                    <div class="provider-notes">
+                        <textarea placeholder="Add clinical notes, observations, or treatment plans..."
+                                  style="width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                        <button style="margin-top: 10px; background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">Save Notes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Remove active class from all links
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+                // Add active class to clicked link
+                this.classList.add('active');
+
+                // Get target section
+                const targetId = this.getAttribute('href').substring(1);
+                const targetSection = document.querySelector(`[id*="${targetId}"], .insights-section:has(.insights-title:contains("${targetId.toUpperCase()}"))`);
+
+                if (targetSection) {
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add medication item styling
+        const style = document.createElement('style');
+        style.textContent = `
+            .medication-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .medication-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 12px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 3px solid #3498db;
+            }
+
+            .med-name {
+                font-weight: 600;
+                color: #2c3e50;
+            }
+
+            .med-frequency {
+                font-size: 12px;
+                color: #7f8c8d;
+                background: white;
+                padding: 4px 8px;
+                border-radius: 12px;
+            }
+
+            .provider-notes textarea:focus {
+                outline: none;
+                border-color: #3498db;
+                box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            }
+
+            .provider-notes button:hover {
+                background: #2980b9;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Add scroll-based navigation highlighting
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.insights-section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (window.pageYOffset >= sectionTop - 100) {
+                    current = section.querySelector('.insights-title').textContent.toLowerCase().replace(/\s+/g, '-');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

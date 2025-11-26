@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Independent Medical Examination Report</title>
+  <style>
+    /* Basic page layout */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      color: #222;
+      margin: 40px;
+      background: #f5f5f5;
+    }
+
+    .report-container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px 50px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.08);
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+      margin-bottom: 0.25em;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      border-bottom: 2px solid #000;
+      padding-bottom: 0.6em;
+      margin-bottom: 0.8em;
+    }
+
+    .subheading {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #555;
+      margin-bottom: 1.5em;
+    }
+
+    .flex-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 1.5em;
+      font-size: 0.9rem;
+    }
+
+    .header-block {
+      flex: 1;
+    }
+
+    .header-block h2 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4em;
+    }
+
+    .label {
+      font-weight: 600;
+    }
+
+    .section {
+      margin-top: 1.2em;
+      margin-bottom: 1.2em;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid #333;
+      padding-bottom: 0.3em;
+      margin-bottom: 0.4em;
+    }
+
+    p {
+      margin: 0.2em 0 0.4em 0;
+      font-size: 0.92rem;
+    }
+
+    ul {
+      margin: 0.2em 0 0.4em 1.2em;
+      font-size: 0.92rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.4em;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.35em 0.5em;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f0f0f0;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: #777;
+      font-size: 0.85rem;
+    }
+
+    .key-factors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .factor-box {
+      border: 1px solid #ddd;
+      padding: 8px 10px;
+      background: #fafafa;
+    }
+
+    .factor-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.25em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .signature-block {
+      margin-top: 2.5em;
+      font-size: 0.9rem;
+    }
+
+    .signature-line {
+      margin-top: 2em;
+      border-top: 1px solid #000;
+      width: 250px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        background: #ffffff;
+      }
+
+      .report-container {
+        box-shadow: none;
+        padding: 30px 36px;
+      }
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <!-- Report Title -->
+    <h1>Independent Medical Examination Report</h1>
+    <div class="subheading">
+      Sample medico-legal report layout – generated via PatientHQ IME Assistant (demo content only)
+    </div>
+
+    <!-- Header: Provider / Examinee / Administrative Info -->
+    <div class="flex-header">
+      <div class="header-block">
+        <h2>Examiner</h2>
+        <p><span class="label">Name:</span> Dr. Jane Smith, M.D.</p>
+        <p><span class="label">Specialty:</span> Orthopedic Surgery</p>
+        <p><span class="label">Address:</span> 1234 Medical Plaza, Suite 500<br />
+           Springfield, CA 90000</p>
+        <p><span class="label">Phone:</span> (555) 123-4567</p>
+      </div>
+      <div class="header-block">
+        <h2>Examinee</h2>
+        <p><span class="label">Name:</span> John Doe</p>
+        <p><span class="label">Date of Birth:</span> 01/15/1984</p>
+        <p><span class="label">Claim / File #:</span> 123456789</p>
+        <p><span class="label">Employer:</span> ABC Logistics, Inc.</p>
+      </div>
+      <div class="header-block">
+        <h2>Administrative</h2>
+        <p><span class="label">Requesting Party:</span> Morgan &amp; Morgan (Sample)</p>
+        <p><span class="label">Date of Injury:</span> 06/01/2024</p>
+        <p><span class="label">IME Date:</span> 02/15/2025</p>
+        <p><span class="label">Jurisdiction:</span> California</p>
+      </div>
+    </div>
+
+    <!-- Referral & Purpose -->
+    <div class="section">
+      <div class="section-title">I. Referral Information & Purpose of Examination</div>
+      <p>
+        This Independent Medical Examination (IME) was requested by Morgan &amp; Morgan in relation to
+        the above-referenced claim involving Mr. John Doe. The primary purpose of this examination is to:
+      </p>
+      <ul>
+        <li>Review the medical records and imaging related to the alleged work injury of 06/01/2024;</li>
+        <li>Provide an independent assessment of diagnosis and current clinical status;</li>
+        <li>Comment on the relationship, if any, between the claimed injury and the current condition;</li>
+        <li>Comment on work capacity and potential need for ongoing treatment.</li>
+      </ul>
+    </div>
+
+    <!-- Records Reviewed -->
+    <div class="section">
+      <div class="section-title">II. Records Reviewed</div>
+      <p class="muted">
+        Note: In a production system, this section would be generated automatically by PatientHQ from the
+        imported record set, with hyperlinks to key documents.
+      </p>
+      <p>The following records were reviewed in preparation for this report:</p>
+      <ul>
+        <li>Emergency Department visit – Springfield General Hospital (06/01/2024)</li>
+        <li>Primary care notes – Dr. Allen (06/05/2024 – 09/15/2024)</li>
+        <li>Orthopedic consultation notes – Dr. Lee (07/10/2024 – 12/01/2024)</li>
+        <li>Physical therapy notes – Springfield PT Center (07/20/2024 – 11/30/2024)</li>
+        <li>Lumbar spine MRI reports – Radiology Associates (07/02/2024)</li>
+        <li>Prior records: primary care notes for low back pain (2018–2022)</li>
+      </ul>
+    </div>
+
+    <!-- Alleged Mechanism & History -->
+    <div class="section">
+      <div class="section-title">III. Alleged Mechanism of Injury & History of Present Illness</div>
+      <p>
+        Mr. Doe reports that on <strong>06/01/2024</strong>, while employed as a delivery driver with
+        ABC Logistics, he was lifting a heavy box from the floor of his truck when he felt an acute onset
+        of lower back pain, described as a “sharp pull” across the lumbar region.
+      </p>
+      <p>
+        He states that symptoms began immediately, with difficulty straightening upright and pain radiating
+        into the left posterior thigh. He denies a specific fall or direct trauma, but notes that the event
+        occurred during a twisting motion while lifting.
+      </p>
+      <p>
+        In subsequent medical visits, the mechanism is generally described consistently as a lifting and
+        twisting injury at work on the above date, with some variation in details regarding the weight of
+        the box and whether radiating symptoms were present at onset.
+      </p>
+    </div>
+
+    <!-- Prior Medical History (Relevent) -->
+    <div class="section">
+      <div class="section-title">IV. Relevant Prior Medical History</div>
+      <p>
+        Prior records document intermittent episodes of mechanical low back pain dating back to 2018.
+        These episodes were typically self-limited, treated conservatively with non-steroidal anti-inflammatory
+        medications and home exercises. There is no documentation of prior radicular symptoms or prior lumbar
+        spine surgery.
+      </p>
+      <p>
+        Imaging prior to the 2024 event is limited; there is no lumbar MRI on record before the alleged date
+        of injury. Routine primary care visits note mild lumbar spondylosis on plain radiographs in 2021.
+      </p>
+    </div>
+
+    <!-- Timeline of Care -->
+    <div class="section">
+      <div class="section-title">V. Timeline of Care (Summary)</div>
+      <p class="muted">
+        This table is suitable for dashboard visualization and can be auto-generated from structured data.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Provider / Facility</th>
+            <th>Encounter Type</th>
+            <th>Body Region(s)</th>
+            <th>Key Findings</th>
+            <th>Plan / Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>06/01/2024</td>
+            <td>Springfield General Hospital</td>
+            <td>Emergency Dept</td>
+            <td>Lumbar Spine</td>
+            <td>Acute low back pain, no neurologic deficit. X-rays without acute fracture.</td>
+            <td>NSAIDs, muscle relaxant, light duty recommended.</td>
+          </tr>
+          <tr>
+            <td>07/02/2024</td>
+            <td>Radiology Associates</td>
+            <td>MRI Lumbar Spine</td>
+            <td>L4–L5, L5–S1</td>
+            <td>Mild disc protrusion at L4–L5 with annular tear; multilevel degenerative changes.</td>
+            <td>No surgical emergency. Findings consistent with degenerative disease.</td>
+          </tr>
+          <tr>
+            <td>07/20/2024 – 11/30/2024</td>
+            <td>Springfield PT Center</td>
+            <td>Physical Therapy</td>
+            <td>Lumbar Spine</td>
+            <td>Gradual improvement in range of motion; persistent pain with prolonged standing.</td>
+            <td>Home exercise program; advised gradual return to full duty as tolerated.</td>
+          </tr>
+          <tr>
+            <td>12/01/2024</td>
+            <td>Dr. Lee (Orthopedics)</td>
+            <td>Follow-up</td>
+            <td>Lumbar Spine</td>
+            <td>Symptoms described as “improved but not resolved.” No significant neurologic deficit.</td>
+            <td>Continued conservative care; no surgery recommended at this time.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Diagnostic Studies -->
+    <div class="section">
+      <div class="section-title">VI. Diagnostic Studies</div>
+      <p><strong>MRI Lumbar Spine – 07/02/2024</strong></p>
+      <ul>
+        <li>Mild disc protrusion at L4–L5 with annular fissure; no significant canal stenosis.</li>
+        <li>Mild multilevel facet arthropathy consistent with degenerative changes.</li>
+        <li>No acute compression fracture, no significant spondylolisthesis.</li>
+      </ul>
+      <p class="muted">
+        In a dynamic report, imaging impressions can be cross-linked to views and tagged as
+        degenerative vs acute-appearing where appropriate.
+      </p>
+    </div>
+
+    <!-- Current Complaints & Functional Status -->
+    <div class="section">
+      <div class="section-title">VII. Current Complaints & Functional Status</div>
+      <p>
+        As of the most recent documentation, Mr. Doe reports persistent low back pain rated at
+        approximately 4–6/10 with prolonged standing or lifting. He denies current radicular pain.
+        He reports difficulty with repetitive bending and lifting tasks but is able to perform basic
+        activities of daily living with pacing and modification.
+      </p>
+      <p>
+        He has returned to modified work duties involving primarily light lifting and reduced
+        bending. There is no documentation of progressive neurologic deficit.
+      </p>
+    </div>
+
+    <!-- Medico-Legal Factors -->
+    <div class="section page-break">
+      <div class="section-title">VIII. Medico-Legal Factors to Consider (Informational Only)</div>
+      <div class="key-factors">
+        <div class="factor-box">
+          <div class="factor-title">Factors Supporting Causation</div>
+          <ul>
+            <li>Clear temporal relationship between lifting incident and onset of acute low back pain.</li>
+            <li>Immediate reporting of injury to employer and presentation to Emergency Department.</li>
+            <li>Initial clinical findings consistent with lumbar strain after lifting injury.</li>
+          </ul>
+        </div>
+        <div class="factor-box">
+          <div class="factor-title">Factors Weakening Causation</div>
+          <ul>
+            <li>Documented history of intermittent low back pain prior to 2024, with degenerative changes noted on prior imaging.</li>
+            <li>Current MRI findings predominantly degenerative in nature (facet arthropathy, mild disc protrusions).</li>
+            <li>No clear imaging evidence of acute structural disruption attributable solely to the 06/01/2024 event.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top: 1em;">
+        <div class="factor-title">Pre-existing vs Post-Injury Analysis</div>
+        <p>
+          Prior records suggest a baseline of episodic mechanical low back pain associated with
+          degenerative changes. The 06/01/2024 lifting event appears to represent an acute
+          exacerbation on a background of pre-existing degenerative lumbar disease, with no
+          convincing evidence of a new structural lesion beyond what would be expected from
+          age-related changes.
+        </p>
+        <p class="muted">
+          Note: The above statements are sample language only and should be replaced or edited by
+          the examining physician to reflect their independent medical opinion.
+        </p>
+      </div>
+    </div>
+
+    <!-- Work Capacity -->
+    <div class="section">
+      <div class="section-title">IX. Work Capacity & Restrictions</div>
+      <p>
+        Based on the available records, Mr. Doe has returned to modified duties with restrictions on
+        frequent bending and heavy lifting. There is documentation supporting toleration of light duty with
+        intermittent positional changes.
+      </p>
+      <p>
+        <strong>Sample restrictions (for illustration only):</strong>
+      </p>
+      <ul>
+        <li>Lifting limited to approximately 25 pounds occasionally, 10 pounds frequently.</li>
+        <li>Avoid frequent or repetitive bending and twisting at the waist.</li>
+        <li>Ability to alternate between sitting and standing as needed.</li>
+      </ul>
+      <p class="muted">
+        Final work restrictions, if any, must be determined by the examining physician after
+        in-person evaluation.
+      </p>
+    </div>
+
+    <!-- Overall Summary / Opinions Placeholder -->
+    <div class="section">
+      <div class="section-title">X. Overall Summary (For IME Narrative)</div>
+      <p>
+        Mr. John Doe is a 40-year-old delivery driver who reports an acute onset of low back pain
+        after a lifting and twisting incident at work on 06/01/2024. Records indicate prompt reporting
+        and evaluation in the Emergency Department, followed by ongoing conservative treatment
+        including medication and physical therapy.
+      </p>
+      <p>
+        Imaging demonstrates degenerative changes of the lumbar spine with mild disc protrusion and
+        facet arthropathy, without significant canal compromise or acute fracture. Prior records
+        document intermittent low back pain predating the 2024 event, consistent with an underlying
+        degenerative process.
+      </p>
+      <p>
+        At last follow-up, Mr. Doe reports partial improvement with residual mechanical back pain
+        and functional limitations primarily with heavier physical tasks. There is no documented
+        progressive neurologic deficit, and he is working in a modified capacity.
+      </p>
+      <p class="muted">
+        The examining physician should insert here their independent conclusions regarding
+        diagnosis, causation, apportionment (if applicable), maximum medical improvement (MMI), and
+        any permanent impairment rating, using jurisdiction-specific standards. The above narrative
+        is sample content only.
+      </p>
+    </div>
+
+    <!-- Signature -->
+    <div class="signature-block">
+      <p><strong>Prepared by:</strong></p>
+      <div class="signature-line"></div>
+      <p>
+        Dr. Jane Smith, M.D.<br />
+        Orthopedic Surgery<br />
+        Date: __________________
+      </p>
+    </div>
+  </div>
+</body>
+</html>

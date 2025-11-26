@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>IME Insight Dashboard - Sample Medico-Legal Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f7f4f0 0%, #ececec 100%);
+            min-height: 100vh;
+            color: #333;
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .patient-details h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 26px;
+        }
+
+        .patient-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .alert-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .alert {
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-primary { background: #42a5f5; color: white; }
+        .alert-high { background: #e74c3c; color: white; }
+        .alert-medium { background: #f39c12; color: white; }
+        .alert-info { background: #26a69a; color: white; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 22px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            padding: 6px;
+            background-color: #f8f8f8;
+            border-radius: 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            display: inline-block;
+            min-height: 44px;
+            min-width: 120px;
+            padding: 12px 18px;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #2c3e50;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+            z-index: 10;
+        }
+
+        .tab:active {
+            background: rgba(255, 255, 255, 0.9) !important;
+            transform: scale(0.95) !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .tab.active {
+            background-color: #4facfe;
+            color: white;
+            font-weight: 600;
+            border-color: #4facfe;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .table th,
+        .table td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 13px;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .badge-high { background: #e74c3c; }
+        .badge-moderate { background: #f39c12; }
+        .badge-low { background: #2ecc71; }
+        .badge-neutral { background: #95a5a6; }
+
+        .insights-section {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 2px solid #ecf0f1;
+        }
+
+        .insights-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insight-cards {
+            display: grid;
+            gap: 12px;
+        }
+
+        .insight-card {
+            border-radius: 10px;
+            padding: 14px 16px;
+            border-left: 5px solid;
+            font-size: 13px;
+        }
+
+        .insight-card.critical {
+            background: rgba(231, 76, 60, 0.05);
+            border-left-color: #e74c3c;
+        }
+
+        .insight-card.warning {
+            background: rgba(243, 156, 18, 0.06);
+            border-left-color: #f39c12;
+        }
+
+        .insight-card.info {
+            background: rgba(52, 152, 219, 0.05);
+            border-left-color: #3498db;
+        }
+
+        .insight-header {
+            font-weight: 600;
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 6px;
+        }
+
+        .insight-content p {
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .pill {
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        /* Right column specific */
+        .snapshot-list {
+            list-style: none;
+            margin-top: 6px;
+        }
+
+        .snapshot-list li {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #ecf0f1;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .snapshot-label {
+            color: #7f8c8d;
+        }
+
+        .snapshot-value {
+            font-weight: 600;
+            color: #2c3e50;
+            text-align: right;
+        }
+
+        .key-issues-list {
+            list-style: none;
+            margin-top: 4px;
+        }
+
+        .key-issues-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f2f6;
+            font-size: 13px;
+        }
+
+        .issue-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .issue-meta {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .vital-card {
+            text-align: center;
+            padding: 12px 10px;
+            border-radius: 10px;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            color: white;
+        }
+
+        .vital-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .vital-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 260px;
+            margin-top: 12px;
+        }
+
+        /* Section navigation (right column) */
+        #sectionNav {
+            position: sticky;
+            top: 20px;
+            z-index: 50;
+            margin-top: 16px;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-group-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+            padding: 0 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 9px 10px;
+            text-decoration: none;
+            color: #2c3e50;
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background-color: #f8f9fa;
+            border-left-color: #3498db;
+            transform: translateX(2px);
+        }
+
+        .nav-link.active {
+            background-color: #e3f2fd;
+            border-left-color: #2196f3;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            margin-right: 8px;
+            font-size: 15px;
+            width: 18px;
+            text-align: center;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .patient-info {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .alert-badges {
+                align-items: center;
+            }
+
+            #sectionNav {
+                position: static;
+                margin-top: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tab {
+                min-width: 100px;
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Header / Case Header -->
+    <div class="header" id="overview-section">
+        <div class="patient-info">
+            <div class="patient-avatar">JD</div>
+            <div class="patient-details">
+                <h1>John Doe – IME Insight Dashboard</h1>
+                <div class="patient-meta">
+                    <span>DOB: 02/18/1980 (45 yrs)</span>
+                    <span>•</span>
+                    <span>Claim #: WC-2025-1183</span>
+                    <span>•</span>
+                    <span>Date of Injury: 03/15/2023</span>
+                    <span>•</span>
+                    <span>Exam Date: 01/10/2025</span>
+                </div>
+            </div>
+            <div class="alert-badges">
+                <div class="alert alert-primary">IME TYPE: ORTHO SPINE</div>
+                <div class="alert alert-high">Permanent Impairment: 18% WPI</div>
+                <div class="alert alert-medium">Work Capacity: MODIFIED DUTY</div>
+                <div class="alert alert-info">MMI: REACHED</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-grid">
+        <!-- LEFT COLUMN: Interactive dashboard -->
+        <div class="card">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button type="button" class="tab active" data-tab="overview-tab">Case Overview</button>
+                <button type="button" class="tab" data-tab="timeline-tab">Timeline & Treatment</button>
+                <button type="button" class="tab" data-tab="impairment-tab">Body Regions & Impairment</button>
+                <button type="button" class="tab" data-tab="work-tab">Work Capacity</button>
+                <button type="button" class="tab" data-tab="causation-tab">Causation & Apportionment</button>
+                <button type="button" class="tab" data-tab="consistency-tab">Consistency & Red Flags</button>
+            </div>
+
+            <!-- Tab: Case Overview -->
+            <div id="overview-tab" class="tab-content active">
+                <div class="card-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3,4H21V6H3V4M3,9H21V11H3V9M3,14H15V16H3V14M3,19H12V21H3V19Z" />
+                    </svg>
+                    Key Medico-Legal Opinions at a Glance
+                </div>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Opinion</th>
+                        <th>Confidence</th>
+                        <th>Impact</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Is injury causally related to work event?</td>
+                        <td><strong>Yes – predominantly industrial</strong></td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-high">Liability</span></td>
+                    </tr>
+                    <tr>
+                        <td>Has the applicant reached Maximum Medical Improvement (MMI)?</td>
+                        <td><strong>Yes – MMI reached as of 11/01/2024</strong></td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-moderate">Future Care / Reserve</span></td>
+                    </tr>
+                    <tr>
+                        <td>Permanent Impairment Rating (Whole Person)</td>
+                        <td><strong>18% WPI</strong> (AMA Guides 5th Ed.)</td>
+                        <td><span class="badge badge-moderate">Moderate</span></td>
+                        <td><span class="badge badge-high">Settlement Value</span></td>
+                    </tr>
+                    <tr>
+                        <td>Work Capacity & Restrictions</td>
+                        <td><strong>Modified duty</strong> – no lifting &gt; 20 lbs; avoid repetitive flexion/rotation</td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-moderate">Return-to-Work Strategy</span></td>
+                    </tr>
+                    <tr>
+                        <td>Need for future medical care?</td>
+                        <td><strong>Yes</strong> – periodic PT, home exercise, medication mgmt, PRN injections</td>
+                        <td><span class="badge badge-moderate">Moderate</span></td>
+                        <td><span class="badge badge-moderate">Future Exposure</span></td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-section">
+                    <h3 class="insights-title" id="issues-section">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4C4,2.89 4.89,2 6,2M7,11V13H17V11H7M7,15V17H14V15H7Z" />
+                        </svg>
+                        Key Issues for Counsel
+                    </h3>
+                    <ul class="key-issues-list">
+                        <li>
+                            <div class="issue-title">1. Extent of industrial vs non-industrial apportionment</div>
+                            <div class="issue-meta">Defense will focus on documented pre-existing lumbar degeneration and non-industrial obesity contributing to impairment.</div>
+                        </li>
+                        <li>
+                            <div class="issue-title">2. Appropriateness of permanent work restrictions</div>
+                            <div class="issue-meta">Look at functional testing vs subjective complaints; MD notes good preservation of strength and coordination.</div>
+                        </li>
+                        <li>
+                            <div class="issue-title">3. Alignment of treatment history with mechanism of injury</div>
+                            <div class="issue-meta">Gaps in care and late reporting may be raised; MD offers explanation for clinical plausibility vs secondary gain.</div>
+                        </li>
+                        <li>
+                            <div class="issue-title">4. Future medical cost exposure</div>
+                            <div class="issue-meta">Dashboard highlights likely trajectory: conservative care vs escalation to injections/surgery.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="insights-section">
+                    <h3 class="insights-title" id="opinions-section">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9,21A1,1 0 0,1 8,20V13A1,1 0 0,1 9,12H15A1,1 0 0,1 16,13V20A1,1 0 0,1 15,21H9M11,3H13V11H11V3Z" />
+                        </svg>
+                        Highlighted Opinions (Interactive Filters)
+                    </h3>
+                    <div class="insight-cards">
+                        <div class="insight-card critical">
+                            <div class="insight-header">Causation – Work Event as Predominant Cause</div>
+                            <div class="insight-content">
+                                <p><strong>Summary:</strong> Mechanism of injury (lifting + twist) medically consistent with lumbar disc injury and observed imaging findings.</p>
+                                <p><strong>Evidence:</strong> MRI L4–5 disc protrusion with annular tear; onset of radicular symptoms within 48 hours; no documented prior lumbar radiculopathy.</p>
+                                <p><strong>For Counsel:</strong> Click “Causation & Apportionment” tab (above) to drill into pre-existing factors and % apportionment model.</p>
+                            </div>
+                        </div>
+                        <div class="insight-card warning">
+                            <div class="insight-header">Permanent Impairment – Spine & Lower Extremity</div>
+                            <div class="insight-content">
+                                <p><strong>WPI Breakdown:</strong> Lumbar spine 13% + right lower extremity 7% → Combined 18% WPI (AMA Guides 5th, Ch. 15 & 17).</p>
+                                <p><strong>Rationale:</strong> DRE Category III, documented radiculopathy, residual weakness, and limited endurance for prolonged standing/walking.</p>
+                                <p><strong>Interactive View:</strong> See “Body Regions & Impairment” for graphical breakdown of ratings by region.</p>
+                            </div>
+                        </div>
+                        <div class="insight-card info">
+                            <div class="insight-header">Consistency & Reliability of Presentation</div>
+                            <div class="insight-content">
+                                <p><strong>Overall:</strong> Mild symptom magnification but core pain pattern and functional deficits judged <em>clinically reliable</em>.</p>
+                                <p><strong>Testing:</strong> Waddell’s signs 2/5; inconsistent effort on single-lift test at higher loads; gait and transfers observed to be more fluid when distracted.</p>
+                                <p><strong>For Counsel:</strong> “Consistency & Red Flags” tab shows an at-a-glance graphic of reliability factors.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Timeline & Treatment -->
+            <div id="timeline-tab" class="tab-content">
+                <div class="card-title" id="timeline-section">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M17,12H7V10H17M19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V5H19V19Z"/>
+                    </svg>
+                    Injury Timeline & Treatment History
+                </div>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Event</th>
+                        <th>Category</th>
+                        <th>Legal Significance</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>03/15/2023</td>
+                        <td>Acute lifting injury while loading pallets; immediate low back pain.</td>
+                        <td>Injury Event</td>
+                        <td>Defines mechanism; start of industrial exposure.</td>
+                    </tr>
+                    <tr>
+                        <td>03/17/2023</td>
+                        <td>First urgent care visit; documented lumbar strain, off work 3 days.</td>
+                        <td>Initial Report</td>
+                        <td>Corroborates timing; short delay but clinically plausible.</td>
+                    </tr>
+                    <tr>
+                        <td>06/02/2023</td>
+                        <td>MRI lumbar spine – L4–5 posterior disc protrusion with right-sided annular tear.</td>
+                        <td>Imaging</td>
+                        <td>Objective support for ongoing symptoms.</td>
+                    </tr>
+                    <tr>
+                        <td>08/10/2023</td>
+                        <td>Epidural steroid injection #1; partial temporary relief (~40%).</td>
+                        <td>Treatment</td>
+                        <td>Shows need for interventional care; informs future medical.</td>
+                    </tr>
+                    <tr>
+                        <td>12/15/2023</td>
+                        <td>Return to modified duty; lifting limits implemented.</td>
+                        <td>Work Status</td>
+                        <td>Important for wage loss / vocational impact.</td>
+                    </tr>
+                    <tr>
+                        <td>11/01/2024</td>
+                        <td>Treating physician declares MMI; permanent restrictions assigned.</td>
+                        <td>MMI</td>
+                        <td>Anchor date for ratings and future care planning.</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M3,13H5V11H3V13M7,13H9V11H7V13M11,13H13V11H11V13M15,13H17V11H15V13M19,13H21V11H19V13Z" />
+                        </svg>
+                        Symptom & Work Status Trajectory (Visual)
+                    </h3>
+
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Body Regions & Impairment -->
+            <div id="impairment-tab" class="tab-content">
+                <div class="card-title" id="impairment-section">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12,2A7,7 0 0,1 19,9V10A3,3 0 0,1 16,13H15V11H17V9A5,5 0 0,0 7,9V11H9V13H8A3,3 0 0,1 5,10V9A7,7 0 0,1 12,2M10,14H14V22H10V14Z"/>
+                    </svg>
+                    Body Region Ratings & Apportionment
+                </div>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Region</th>
+                        <th>Diagnosis</th>
+                        <th>AMA Guides Reference</th>
+                        <th>Impairment</th>
+                        <th>Industrial / Non-Industrial</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Lumbar Spine</td>
+                        <td>L4–5 disc protrusion with radiculopathy</td>
+                        <td>DRE Cat III – Ch. 15</td>
+                        <td><strong>13% WPI</strong></td>
+                        <td>70% Industrial / 30% Pre-existing degeneration</td>
+                    </tr>
+                    <tr>
+                        <td>Right Lower Extremity</td>
+                        <td>Mild S1 weakness, decreased endurance</td>
+                        <td>Ch. 17 (Peripheral nerve)</td>
+                        <td><strong>7% WPI</strong></td>
+                        <td>80% Industrial / 20% Non-industrial (obesity)</td>
+                    </tr>
+                    <tr>
+                        <td>Cervical Spine</td>
+                        <td>Pre-existing degenerative changes, asymptomatic</td>
+                        <td>Ch. 15</td>
+                        <td><strong>0% WPI</strong></td>
+                        <td>100% Non-industrial</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M3 17V19H21V17H3M3 13V15H21V13H3M3 9V11H21V9H3M3 5V7H21V5H3Z" />
+                        </svg>
+                        Impairment Breakdown (Graphical View)
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="impairmentChart"></canvas>
+                    </div>
+
+                    <div class="insight-cards" style="margin-top: 12px;">
+                        <div class="insight-card info">
+                            <div class="insight-header">How to Use This View</div>
+                            <div class="insight-content">
+                                <p>• Hover over each bar to see the industrial vs non-industrial split for that body region.</p>
+                                <p>• Counsel can quickly identify which regions are driving the bulk of exposure.</p>
+                                <p>• MD can export this breakdown to align narrative report with numerical ratings.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Work Capacity -->
+            <div id="work-tab" class="tab-content">
+                <div class="card-title" id="work-section">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M10,17V14H3V10H10V7L15,12L10,17M19,3H5A2,2 0 0,0 3,5V9H5V5H19V19H5V15H3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3Z"/>
+                    </svg>
+                    Functional Capacity & Work Restrictions
+                </div>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>Restriction</th>
+                        <th>Basis</th>
+                        <th>Legal Relevance</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Lifting / Carrying</td>
+                        <td>No lifting &gt; 20 lbs; no frequent lifting &gt; 10 lbs from floor.</td>
+                        <td>Objective lumbar pathology; radicular complaints with repetitive lifting.</td>
+                        <td>RTW accommodations; job modification; vocational analysis.</td>
+                    </tr>
+                    <tr>
+                        <td>Postures</td>
+                        <td>Avoid prolonged bending, twisting, or stooping; limit sitting to 45 min blocks.</td>
+                        <td>Exam reproduces pain with flexion/rotation; imaging correlates.</td>
+                        <td>Impacts sedentary vs light work classification.</td>
+                    </tr>
+                    <tr>
+                        <td>Stand / Walk Tolerance</td>
+                        <td>Stand/walk up to 4 hours per day with breaks.</td>
+                        <td>Functional testing shows fatigue and pain increase beyond 4 hours.</td>
+                        <td>Useful in determining suitable alternate occupations.</td>
+                    </tr>
+                    <tr>
+                        <td>Overtime / Heavy Labor</td>
+                        <td>Not medically appropriate for heavy manual labor or mandatory overtime.</td>
+                        <td>Risk of symptom exacerbation and re-injury.</td>
+                        <td>Supports permanent partial disability projections.</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9,21H7V19H9M13,21H11V19H13M17,21H15V19H17M19,3H5A2,2 0 0,0 3,5V17H21V5A2,2 0 0,0 19,3Z" />
+                        </svg>
+                        Work Capacity Profile
+                    </h3>
+
+                    <div class="vitals-grid">
+                        <div class="vital-card">
+                            <div class="vital-value">Light</div>
+                            <div class="vital-label">Overall Work Level</div>
+                        </div>
+                        <div class="vital-card">
+                            <div class="vital-value">4 hrs</div>
+                            <div class="vital-label">Max Stand/Walk</div>
+                        </div>
+                        <div class="vital-card">
+                            <div class="vital-value">20 lbs</div>
+                            <div class="vital-label">Max Lift</div>
+                        </div>
+                        <div class="vital-card">
+                            <div class="vital-value">MMI</div>
+                            <div class="vital-label">Status</div>
+                        </div>
+                    </div>
+
+                    <div class="insight-cards" style="margin-top: 14px;">
+                        <div class="insight-card warning">
+                            <div class="insight-header">Counsel Tip: RTW Scenarios</div>
+                            <div class="insight-content">
+                                <p>Use this tab to scenario-plan:</p>
+                                <p>• <strong>Defense</strong> – demonstrate that meaningful modified duty is feasible.</p>
+                                <p>• <strong>Applicant</strong> – highlight practical limitations and impact on labor market access.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Causation & Apportionment -->
+            <div id="causation-tab" class="tab-content">
+                <div class="card-title" id="causation-section">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M9,7H7V9H5V11H7V13H9V11H11V9H9V7M15,7H19V9H17V17H15V7Z"/>
+                    </svg>
+                    Causation & Apportionment Matrix
+                </div>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Issue</th>
+                        <th>Industrial Contribution</th>
+                        <th>Non-Industrial Factors</th>
+                        <th>MD Rationale</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Lumbar disc pathology</td>
+                        <td><strong>70% Industrial</strong></td>
+                        <td>Pre-existing degenerative change; BMI 33.</td>
+                        <td>Work event precipitated symptomatic disc injury; prior records show no disabling lumbar complaints.</td>
+                    </tr>
+                    <tr>
+                        <td>Right lower extremity weakness</td>
+                        <td><strong>80% Industrial</strong></td>
+                        <td>Deconditioning; age-related factors.</td>
+                        <td>Weakness emerged only after documented radiculopathy; improved but not resolved with treatment.</td>
+                    </tr>
+                    <tr>
+                        <td>Future medical needs</td>
+                        <td><strong>60% Industrial</strong></td>
+                        <td>Ongoing degeneration expected irrespective of work event.</td>
+                        <td>Industrial injury accelerated need for interventional care but does not fully account for long-term degeneration.</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2M11,6H13V13H11V6M11,15H13V17H11V15Z" />
+                        </svg>
+                        Legal Framing of Causation Opinions
+                    </h3>
+
+                    <div class="insight-cards">
+                        <div class="insight-card critical">
+                            <div class="insight-header">Standard Applied</div>
+                            <div class="insight-content">
+                                <p>Opinions are expressed using the jurisdiction’s standard (“reasonable medical probability” vs “substantial contributing factor”).</p>
+                                <p>Hover over each matrix cell (in a future live version) to see full citation to relevant guidelines and case law (if desired).</p>
+                            </div>
+                        </div>
+                        <div class="insight-card info">
+                            <div class="insight-header">Export to Formal Report</div>
+                            <div class="insight-content">
+                                <p>This matrix is designed to mirror the structure of the formal narrative report, making it easy for counsel to:</p>
+                                <p>• Cross-reference opinions<br>• Identify where to request clarification or supplemental questions<br>• Present clear visual apportionment at mediation or trial</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Consistency & Red Flags -->
+            <div id="consistency-tab" class="tab-content">
+                <div class="card-title" id="consistency-section">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M13,13H11V7H13M13,17H11V15H13M11.99,2C6.47,2 2,6.47 2,12C2,17.53 6.47,22 11.99,22C17.52,22 21.99,17.53 21.99,12C21.99,6.47 17.52,2 11.99,2Z" />
+                    </svg>
+                    Consistency, Reliability & Red Flags
+                </div>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>Finding</th>
+                        <th>MD Interpretation</th>
+                        <th>Impact</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Symptom Reporting</td>
+                        <td>Some variability in pain scores; overall pattern coherent with work demands.</td>
+                        <td>Minor exaggeration suspected; core complaints consistent with objective pathology.</td>
+                        <td><span class="badge badge-low">Low concern</span></td>
+                    </tr>
+                    <tr>
+                        <td>Physical Exam</td>
+                        <td>Inconsistent effort on higher-load testing; normal coordination when distracted.</td>
+                        <td>Suggests overlay but does not negate underlying impairment.</td>
+                        <td><span class="badge badge-moderate">Moderate concern</span></td>
+                    </tr>
+                    <tr>
+                        <td>Records vs Self-Report</td>
+                        <td>Under-reported prior minor back strains; no documented serious prior injury.</td>
+                        <td>More likely recall bias than intent to deceive.</td>
+                        <td><span class="badge badge-neutral">Neutral</span></td>
+                    </tr>
+                    <tr>
+                        <td>Secondary Gain Factors</td>
+                        <td>Prolonged claim; financial stress; limited alternative job skills.</td>
+                        <td>Potential motivation to maximize complaints; medically accounted for in consistency rating.</td>
+                        <td><span class="badge badge-moderate">Moderate concern</span></td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-section">
+                    <h3 class="insights-title">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,0 2,12C2,15.31 3.56,18.21 6,20V13H4V11H6V9C6,6.79 7.79,5 10,5H12V7H10A1,1 0 0,0 9,8V11H12V13H9V21.95C9.65,22.3 10.31,22.57 11,22.74V22H13V22.74C17.06,21.78 20,18.18 20,14V12H22V10H20V8A6,6 0 0,0 14,2H12Z" />
+                        </svg>
+                        Reliability Gauge
+                    </h3>
+
+                    <div class="chart-container">
+                        <canvas id="reliabilityChart"></canvas>
+                    </div>
+
+                    <div class="insight-cards" style="margin-top: 12px;">
+                        <div class="insight-card info">
+                            <div class="insight-header">Quick Takeaway</div>
+                            <div class="insight-content">
+                                <p>Overall reliability is rated as <strong>“Generally reliable with mild overlay.”</strong></p>
+                                <p>This helps both sides frame the testimony: neither “perfectly pristine” nor “completely non-credible.”</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Snapshot & Navigation -->
+        <div>
+            <!-- Case Snapshot -->
+            <div class="card">
+                <div class="card-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12,6A6,6 0 0,1 18,12V13H20V12A8,8 0 0,0 4,12V13H6V12A6,6 0 0,1 12,6M6,14V18H18V14H6M6,20A2,2 0 0,0 8,22H16A2,2 0 0,0 18,20V19H6V20Z" />
+                    </svg>
+                    Case Snapshot
+                </div>
+                <ul class="snapshot-list">
+                    <li>
+                        <span class="snapshot-label">Jurisdiction</span>
+                        <span class="snapshot-value">CA Workers’ Comp</span>
+                    </li>
+                    <li>
+                        <span class="snapshot-label">Employer</span>
+                        <span class="snapshot-value">ABC Logistics, Inc.</span>
+                    </li>
+                    <li>
+                        <span class="snapshot-label">Defense Firm</span>
+                        <span class="snapshot-value">Smith & Partners</span>
+                    </li>
+                    <li>
+                        <span class="snapshot-label">Applicant Attorney</span>
+                        <span class="snapshot-value">Jane Roe, Esq.</span>
+                    </li>
+                    <li>
+                        <span class="snapshot-label">Records Reviewed</span>
+                        <span class="snapshot-value">1,342 pages</span>
+                    </li>
+                    <li>
+                        <span class="snapshot-label">Imaging Studies</span>
+                        <span class="snapshot-value">3 MRI, 2 X-ray</span>
+                    </li>
+                    <li>
+                        <span class="snapshot-label">Treating Physicians</span>
+                        <span class="snapshot-value">4 specialties</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Panel: Key Questions -->
+            <div class="card">
+                <div class="card-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M10,17L15,12L10,7V17Z" />
+                    </svg>
+                    Key Questions for This IME
+                </div>
+                <ul class="key-issues-list">
+                    <li>
+                        <div class="issue-title">Causation</div>
+                        <div class="issue-meta">Is the current lumbar condition primarily related to the work event of 03/15/2023?</div>
+                    </li>
+                    <li>
+                        <div class="issue-title">MMI & Ratings</div>
+                        <div class="issue-meta">Has Mr. Doe reached MMI and what is the accurate WPI under AMA Guides?</div>
+                    </li>
+                    <li>
+                        <div class="issue-title">Work Capacity</div>
+                        <div class="issue-meta">What permanent restrictions, if any, are medically necessary?</div>
+                    </li>
+                    <li>
+                        <div class="issue-title">Future Care</div>
+                        <div class="issue-meta">Is ongoing interventional or surgical care indicated, and at what expected frequency?</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Navigation -->
+            <nav id="sectionNav" class="card">
+                <div class="card-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
+                    </svg>
+                    Interactive Navigation
+                </div>
+                <div class="nav-links">
+                    <div>
+                        <div class="nav-group-title">Core</div>
+                        <a href="#overview-section" class="nav-link" data-tab="overview-tab">
+                            <span class="nav-icon">📋</span>
+                            <span>Case Overview</span>
+                        </a>
+                        <a href="#issues-section" class="nav-link" data-tab="overview-tab">
+                            <span class="nav-icon">⚖️</span>
+                            <span>Key Issues for Counsel</span>
+                        </a>
+                        <a href="#opinions-section" class="nav-link" data-tab="overview-tab">
+                            <span class="nav-icon">💡</span>
+                            <span>Highlighted Opinions</span>
+                        </a>
+                    </div>
+                    <div>
+                        <div class="nav-group-title">Clinical Timeline</div>
+                        <a href="#timeline-section" class="nav-link" data-tab="timeline-tab">
+                            <span class="nav-icon">🕒</span>
+                            <span>Timeline & Treatment</span>
+                        </a>
+                    </div>
+                    <div>
+                        <div class="nav-group-title">Ratings</div>
+                        <a href="#impairment-section" class="nav-link" data-tab="impairment-tab">
+                            <span class="nav-icon">📊</span>
+                            <span>Body Regions & Ratings</span>
+                        </a>
+                    </div>
+                    <div>
+                        <div class="nav-group-title">Work & Causation</div>
+                        <a href="#work-section" class="nav-link" data-tab="work-tab">
+                            <span class="nav-icon">💼</span>
+                            <span>Work Capacity</span>
+                        </a>
+                        <a href="#causation-section" class="nav-link" data-tab="causation-tab">
+                            <span class="nav-icon">⚖️</span>
+                            <span>Causation & Apportionment</span>
+                        </a>
+                    </div>
+                    <div>
+                        <div class="nav-group-title">Reliability</div>
+                        <a href="#consistency-section" class="nav-link" data-tab="consistency-tab">
+                            <span class="nav-icon">🧩</span>
+                            <span>Consistency & Red Flags</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple tab management
+    document.addEventListener('DOMContentLoaded', () => {
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        function activateTab(tabId) {
+            tabContents.forEach(c => c.classList.toggle('active', c.id === tabId));
+            tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tabId));
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabId = tab.getAttribute('data-tab');
+                activateTab(tabId);
+                const firstSection = document.getElementById(tabId);
+                if (firstSection && window.innerWidth <= 900) {
+                    firstSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Navigation buttons that auto-switch tabs
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetTab = link.getAttribute('data-tab');
+                const href = link.getAttribute('href');
+                if (targetTab) {
+                    activateTab(targetTab);
+                }
+                const targetId = href.replace('#', '');
+                const sectionEl = document.getElementById(targetId);
+                if (sectionEl) {
+                    sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // Charts
+        if (window.Chart) {
+            // Timeline chart – pain & work status over time
+            const timelineCtx = document.getElementById('timelineChart');
+            if (timelineCtx) {
+                new Chart(timelineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Injury', '3 mo', '6 mo', '9 mo', '12 mo', '18 mo'],
+                        datasets: [
+                            {
+                                label: 'Pain (0–10)',
+                                data: [8, 7, 6, 5, 4, 4],
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.12)',
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Work Status (0=off, 1=mod, 2=full)',
+                                data: [0, 0, 0.5, 1, 1, 1],
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52, 152, 219, 0.10)',
+                                tension: 0.3,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                title: { display: true, text: 'Pain (0–10)' },
+                                min: 0,
+                                max: 10
+                            },
+                            y1: {
+                                type: 'linear',
+                                position: 'right',
+                                title: { display: true, text: 'Work Status' },
+                                min: 0,
+                                max: 2,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: (v) => v === 0 ? 'Off' : (v === 1 ? 'Modified' : 'Full')
+                                },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Impairment chart – by region
+            const impCtx = document.getElementById('impairmentChart');
+            if (impCtx) {
+                new Chart(impCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Lumbar Spine', 'Right LE', 'Cervical Spine'],
+                        datasets: [
+                            {
+                                label: 'Industrial % WPI',
+                                data: [9.1, 5.6, 0],
+                                backgroundColor: 'rgba(76, 175, 80, 0.8)'
+                            },
+                            {
+                                label: 'Non-Industrial % WPI',
+                                data: [3.9, 1.4, 0],
+                                backgroundColor: 'rgba(149, 165, 166, 0.9)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Percent WPI' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Reliability radar chart
+            const relCtx = document.getElementById('reliabilityChart');
+            if (relCtx) {
+                new Chart(relCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Symptom Consistency', 'Exam Effort', 'Records Alignment', 'Behavioral Observations', 'Secondary Gain Risk'],
+                        datasets: [
+                            {
+                                label: 'Reliability (higher = better)',
+                                data: [8, 6, 7, 7, 5],
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52, 152, 219, 0.15)',
+                                pointBackgroundColor: '#3498db'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: { display: true },
+                                suggestedMin: 0,
+                                suggestedMax: 10,
+                                ticks: { stepSize: 2 }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+</script>
+</body>
+</html>

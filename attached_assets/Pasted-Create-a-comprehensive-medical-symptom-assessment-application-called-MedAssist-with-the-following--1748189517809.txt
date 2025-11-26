@@ -1,0 +1,376 @@
+Create a comprehensive medical symptom assessment application called "MedAssist" with the following specifications:
+
+PROJECT OVERVIEW: Build a mobile-first web application that provides AI-powered differential diagnosis suggestions based on user symptoms, tracks symptom progression over time, monitors prescription effects, and provides intelligent health insights through pattern recognition. The app should integrate multiple free medical APIs to provide unlimited access to medical knowledge.
+
+TECHNOLOGY STACK:
+
+Frontend: React with TypeScript, Tailwind CSS for styling
+Backend: Node.js with Express.js and TypeScript
+Database: PostgreSQL with Prisma ORM
+Authentication: JWT with bcrypt for password hashing
+API Integration: Axios for HTTP requests
+State Management: React Context API
+Deployment: Ready for Replit deployment
+
+REQUIRED API INTEGRATIONS:
+
+UMLS API (https://uts-ws.nlm.nih.gov/rest/) - Medical terminology and concepts
+RxNorm API (https://rxnav.nlm.nih.gov/REST/) - Medication database
+OpenFDA API (https://api.fda.gov/) - Drug safety and adverse events
+PubMed E-utilities API (https://eutils.ncbi.nlm.nih.gov/entrez/eutils/) - Medical research
+
+PROJECT STRUCTURE:
+medassist/
+├── client/                          # React frontend
+│   ├── src/
+│   │   ├── components/             # Reusable UI components
+│   │   │   ├── common/            # Button, Input, Modal, etc.
+│   │   │   ├── symptom/           # Symptom entry, assessment
+│   │   │   ├── prescription/      # Medication tracking
+│   │   │   └── dashboard/         # Charts, insights
+│   │   ├── pages/                 # Main application pages
+│   │   │   ├── Home.tsx
+│   │   │   ├── SymptomAssessment.tsx
+│   │   │   ├── PrescriptionTracker.tsx
+│   │   │   ├── HealthInsights.tsx
+│   │   │   └── Profile.tsx
+│   │   ├── services/              # API service layers
+│   │   │   ├── authService.ts
+│   │   │   ├── medicalApiService.ts
+│   │   │   └── userDataService.ts
+│   │   ├── context/               # React Context for state
+│   │   ├── types/                 # TypeScript type definitions
+│   │   └── utils/                 # Helper functions
+│   ├── package.json
+│   └── tailwind.config.js
+├── server/                          # Node.js backend
+│   ├── src/
+│   │   ├── controllers/            # Request handlers
+│   │   ├── services/               # Business logic
+│   │   ├── routes/                 # API route definitions
+│   │   ├── middleware/             # Authentication, validation
+│   │   ├── models/                 # Database models (Prisma)
+│   │   ├── utils/                  # Utility functions
+│   │   └── config/                 # Configuration files
+│   ├── prisma/                     # Database schema and migrations
+│   └── package.json
+├── shared/                          # Shared types and utilities
+├── .env.example                     # Environment variables template
+└── README.md
+
+DATABASE SCHEMA (using Prisma): Create the following database models:
+
+model User {
+
+  id              String   @id @default(cuid())
+
+  email           String   @unique
+
+  passwordHash    String
+
+  firstName       String
+
+  lastName        String
+
+  dateOfBirth     DateTime?
+
+  gender          String?
+
+  heightCm        Int?
+
+  weightKg        Float?
+
+  phoneNumber     String?
+
+  emergencyContactName  String?
+
+  emergencyContactPhone String?
+
+  createdAt       DateTime @default(now())
+
+  updatedAt       DateTime @updatedAt
+
+  isActive        Boolean  @default(true)
+
+  lastLogin       DateTime?
+
+  timezone        String   @default("UTC")
+
+  
+
+  medicalHistory     MedicalHistory[]
+
+  symptomEntries     SymptomEntry[]
+
+  symptomSets        SymptomSet[]
+
+  prescriptions      Prescription[]
+
+  notifications      Notification[]
+
+}
+
+model MedicalHistory {
+
+  id              String   @id @default(cuid())
+
+  userId          String
+
+  conditionName   String
+
+  diagnosedDate   DateTime?
+
+  severity        String?  // mild, moderate, severe
+
+  status          String   @default("active") // active, resolved, chronic
+
+  notes           String?
+
+  createdAt       DateTime @default(now())
+
+  updatedAt       DateTime @updatedAt
+
+  
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+}
+
+model SymptomEntry {
+
+  id                    String   @id @default(cuid())
+
+  userId                String
+
+  symptomSetId          String?
+
+  symptomDescription    String
+
+  bodyLocation          String?
+
+  severityScore         Int      // 1-10
+
+  onsetDate             DateTime
+
+  durationHours         Int?
+
+  frequency             String?  // constant, intermittent, episodic
+
+  triggers              String?
+
+  associatedSymptoms    String[] // JSON array
+
+  photoUrls             String[] // JSON array
+
+  voiceNoteUrl          String?
+
+  createdAt             DateTime @default(now())
+
+  updatedAt             DateTime @updatedAt
+
+  
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  symptomSet            SymptomSet? @relation(fields: [symptomSetId], references: [id])
+
+  differentialDiagnoses DifferentialDiagnosis[]
+
+}
+
+model SymptomSet {
+
+  id          String   @id @default(cuid())
+
+  userId      String
+
+  name        String
+
+  description String?
+
+  status      String   @default("active") // active, resolved, chronic
+
+  createdAt   DateTime @default(now())
+
+  updatedAt   DateTime @updatedAt
+
+  resolvedAt  DateTime?
+
+  
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  symptoms    SymptomEntry[]
+
+}
+
+model DifferentialDiagnosis {
+
+  id                    String   @id @default(cuid())
+
+  symptomEntryId        String
+
+  diagnosisName         String
+
+  confidenceScore       Float    // 0.0 to 1.0
+
+  reasoning             String
+
+  recommendedTests      String[] // JSON array
+
+  urgencyLevel          String   // low, medium, high, emergency
+
+  redFlags              String[] // JSON array
+
+  selfCareInstructions  String?
+
+  whenToSeekCare        String?
+
+  sources               String[] // JSON array of API sources
+
+  createdAt             DateTime @default(now())
+
+  
+
+  symptomEntry          SymptomEntry @relation(fields: [symptomEntryId], references: [id], onDelete: Cascade)
+
+}
+
+model Prescription {
+
+  id                        String   @id @default(cuid())
+
+  userId                    String
+
+  medicationName            String
+
+  dosage                    String
+
+  frequency                 String
+
+  startDate                 DateTime
+
+  endDate                   DateTime?
+
+  prescribingDoctor         String?
+
+  purpose                   String?
+
+  sideEffectsExperienced    String[] // JSON array
+
+  effectivenessRating       Int?     // 1-5
+
+  notes                     String?
+
+  isActive                  Boolean  @default(true)
+
+  createdAt                 DateTime @default(now())
+
+  updatedAt                 DateTime @updatedAt
+
+  
+
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+}
+
+model Notification {
+
+  id                String   @id @default(cuid())
+
+  userId            String
+
+  type              String   // symptom_checkin, medication_reminder, follow_up
+
+  title             String
+
+  message           String
+
+  scheduledFor      DateTime
+
+  sentAt            DateTime?
+
+  openedAt          DateTime?
+
+  isRead            Boolean  @default(false)
+
+  actionTaken       Boolean  @default(false)
+
+  relatedEntityId   String?
+
+  createdAt         DateTime @default(now())
+
+  
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+}
+
+CORE FEATURES TO IMPLEMENT:
+
+USER AUTHENTICATION & PROFILE:
+
+User registration with email verification Secure login with JWT tokens Medical history setup during onboarding Profile management with health metrics
+
+SYMPTOM ASSESSMENT ENGINE:
+
+Multi-step symptom entry form with:
+
+Text/voice description input Body diagram for location selection Severity slider (1-10) Timeline picker for onset Associated symptoms checkboxes
+
+AI-powered follow-up question generation Integration with UMLS API for medical concept matching Differential diagnosis generation with confidence scores Urgency level assessment with red flag detection
+
+MEDICAL API INTEGRATION SERVICE: Create a unified medical API service that aggregates:
+
+UMLS for medical terminology and concept mapping RxNorm for medication information and drug interactions OpenFDA for adverse event data and drug safety information PubMed for latest medical research and evidence
+
+PRESCRIPTION TRACKING:
+
+Medication entry with OCR support for pill bottles Dosage and frequency scheduling Side effect logging and correlation analysis Effectiveness rating system Drug interaction warnings via RxNorm API
+
+SYMPTOM PROGRESSION MONITORING:
+
+Automatic symptom set creation and grouping Timeline visualization of symptom progression Pattern recognition for recurring symptoms Correlation analysis between medications and symptom changes
+
+HEALTH INSIGHTS DASHBOARD:
+
+Interactive charts showing symptom trends Medication effectiveness analysis Predictive insights for symptom patterns Export functionality for healthcare provider visits
+
+SECURITY & COMPLIANCE REQUIREMENTS:
+
+HIPAA-compliant data handling practices End-to-end encryption for sensitive health data Secure password hashing with bcrypt JWT token-based authentication with refresh tokens Input validation and sanitization for all user inputs Rate limiting for API endpoints Comprehensive medical disclaimers throughout the app
+
+API SERVICE IMPLEMENTATION: Create a comprehensive medical API aggregation service with:
+
+Intelligent caching to minimize API calls Error handling and fallback mechanisms Confidence scoring based on multiple source validation Medical terminology normalization across different APIs Rate limiting compliance for all external APIs
+
+FRONTEND COMPONENTS: Build responsive, mobile-first React components including:
+
+Symptom entry wizard with progressive disclosure Interactive body diagram for symptom location Medication tracker with calendar integration Differential diagnosis results with expandable details Health insights dashboard with interactive charts User profile management with medical history
+
+BACKEND API ENDPOINTS: Implement RESTful API endpoints for:
+
+Authentication (register, login, refresh token) User profile management Symptom entry and assessment Medical knowledge search and retrieval Prescription management Health insights and analytics Notification management
+
+ENVIRONMENT VARIABLES SETUP: Create .env file with placeholders for:
+
+DATABASE_URL (PostgreSQL connection string) JWT_SECRET and JWT_REFRESH_SECRET UMLS_API_KEY (register at uts.nlm.nih.gov) FDA_API_KEY (register at open.fda.gov) NCBI_API_KEY (for PubMed, register at ncbi.nlm.nih.gov) ENCRYPTION_KEY for sensitive data
+
+MEDICAL DISCLAIMERS: Include prominent medical disclaimers throughout the application:
+
+"This app is for informational purposes only and not a substitute for professional medical advice" "Always consult healthcare providers for diagnosis and treatment" "Seek immediate medical attention for emergencies" Clear urgency indicators for serious symptoms
+
+DEPLOYMENT CONFIGURATION: Configure the application for easy deployment on Replit with:
+
+Proper build scripts for both frontend and backend Database initialization and migration scripts Environment variable configuration Health check endpoints for monitoring
+
+ERROR HANDLING & LOGGING: Implement comprehensive error handling with:
+
+User-friendly error messages Detailed logging for debugging Graceful degradation when APIs are unavailable Retry mechanisms for failed API calls
+
+TESTING FRAMEWORK: Set up basic testing infrastructure with:
+
+Unit tests for critical functions API endpoint testing Medical accuracy validation tests Security testing for authentication
+
+Please create a fully functional, production-ready medical symptom assessment application with all the specified features, proper error handling, security measures, and medical compliance considerations. The app should be mobile-responsive and ready for immediate use with proper documentation and setup instructions.
+
